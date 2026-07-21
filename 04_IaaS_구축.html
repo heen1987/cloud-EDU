@@ -1,0 +1,1437 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4강 · IaaS 구축 — 새싹 클라우드 네이티브 교안</title>
+<link rel="stylesheet" href="assets/_shared/lecture.css">
+</head>
+<body>
+<div class="layout">
+
+  <aside class="toc">
+    <a class="toc-back" href="00_index.html">← 전체 커리큘럼</a>
+    <div class="toc-kicker">4강 · 실습</div>
+    <div class="toc-title">IaaS 구축</div>
+    <nav>
+      <ul>
+        <li><a href="#part1">Ⅰ. 콘솔 기반 IaaS 구축</a></li>
+        <li><a class="l2" href="#u1-1">01 · 실습 목표와 전체 그림</a></li>
+        <li><a class="l2" href="#u1-2">02 · 대시보드 접속</a></li>
+        <li><a class="l2" href="#u1-3">03 · 네트워크 설정</a></li>
+        <li><a class="l2" href="#u1-4">04 · 인스턴스 생성 및 설정</a></li>
+        <li><a class="l2" href="#u1-5">05 · 플로팅 IP 설정</a></li>
+        <li><a class="l2" href="#u1-6">06 · 네트워크 인터페이스 설정</a></li>
+        <li><a class="l2" href="#u1-7">07 · 인스턴스 접속 (SSH)</a></li>
+        <li><a class="l2" href="#u1-8">08 · (참고) Vim 편집기</a></li>
+        <li><a href="#part2">Ⅱ. IaC 클라우드 인프라 구축 — Terraform</a></li>
+        <li><a class="l2" href="#u2-1">01 · Terraform이란</a></li>
+        <li><a class="l2" href="#u2-2">02 · 설치 & CLI 명령어</a></li>
+        <li><a class="l2" href="#u2-3">03 · 파일 구성과 변수 매핑</a></li>
+        <li><a class="l2" href="#u2-4">04 · main.tf 리소스 정의 상세</a></li>
+        <li><a class="l2" href="#u2-5">05 · 실습1 — 하드코딩 버전</a></li>
+        <li><a class="l2" href="#u2-6">06 · 실습2 — 변수화 버전</a></li>
+        <li><a class="l2" href="#u2-7">07 · 실습3(과제) — 인스턴스 5대로 확장</a></li>
+        <li><a href="#lab-0709">실전 실습 자료 (2026-07-09 수업)</a></li>
+        <li><a class="l2" href="#lab-0709-1">01 · tf1 원본 — 인스턴스 1대</a></li>
+        <li><a class="l2" href="#lab-0709-2">02 · tf2 원본 — 5대 확장</a></li>
+        <li><a class="l2" href="#lab-0709-3">03 · tf3 원본 — 변수화 최종본</a></li>
+        <li><a class="l2" href="#lab-0709-4">04 · 복습 문제 원본 (07-10)</a></li>
+        <li><a href="#glossary">용어 사전</a></li>
+        <li><a href="#wrap">정리 & 다음 강의</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main>
+    <button class="toc-toggle">☰ 목차 열기</button>
+
+    <header class="hero">
+      <span class="hero-badge">4강 · 실습</span>
+      <h1>IaaS 구축<br>— 콘솔로 만들어보고, 코드로 자동화하기</h1>
+      <p class="subtitle">3강에서 배운 VPC·Subnet·Instance 개념을 NHN Cloud 콘솔에서 직접 클릭해 쿠버네티스 클러스터용 서버 5대를 만들고, 그 다음 동일한 인프라를 Terraform 코드로 선언해 재현 가능하게 만드는 실습형 강의입니다.</p>
+      <div class="meta">
+        <span>원본: 4.2026년 새싹(SeSAC) 클라우드 네이티브 교육 자료(IaaS 구축).pdf (66p)</span>
+        <span>구성: 콘솔 실습 → IaC(Terraform) 실습</span>
+        <span>핵심 키워드: NHN Cloud · VPC/Subnet · Floating IP · Terraform · IaC</span>
+      </div>
+    </header>
+
+    <div class="roadmap">
+      <h2>이 강의를 보는 순서</h2>
+      <ol>
+        <li><a href="#part1"><strong>왜 직접 손으로 만들어보는가</strong></a> — 3강에서 개념으로만 배운 VPC/Subnet/Instance/Floating IP를 실제로 클릭해보며 리소스 간 의존관계(서브넷은 라우팅 테이블 연결 필수, 인스턴스는 중지해야 NIC 추가 가능 등)를 몸으로 확인한다</li>
+        <li><strong>무엇을 만드는가</strong> — Kubernetes 클러스터용 인스턴스 5대(Control Plane 1 + Worker 3 + NFS 1)라는 구체적 목표</li>
+        <li><strong>어떻게 만드는가</strong> — <a href="#part1">Part Ⅰ: NHN Cloud 콘솔 클릭</a>으로 먼저 만들어본다 → <a href="#part2">Part Ⅱ: 동일한 결과물을 Terraform 코드</a>로 선언해 재현한다</li>
+        <li><a href="#wrap"><strong>핵심 정리</strong></a> — 콘솔 방식과 코드(IaC) 방식의 차이를 비교하고, 다음 강의(5강 · K8S 클러스터 설치)에서 이 5대 서버 위에 실제 쿠버네티스를 올린다</li>
+      </ol>
+    </div>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="part1">
+      <div class="unit-kicker">PART Ⅰ</div>
+      <h2>콘솔 기반 IaaS 구축 (NHN Cloud)</h2>
+      <p class="unit-lede">3강에서 개념으로 배운 VPC·Subnet·Instance·Floating IP를 NHN Cloud 콘솔에서 직접 클릭하며, Kubernetes 클러스터에 필요한 서버 5대(Control Plane 1 + Worker 3 + NFS 1)를 만듭니다.</p>
+
+      <h3 id="u1-1">01 · 실습 목표와 전체 그림</h3>
+      <p>이번 실습의 목표는 하나입니다 — Control Plane(마스터) 1대, Worker 3대, NFS 1대, 총 5대의 우분투 22.04 서버를 NHN Cloud(<span class="term" title="여러 회사가 함께 만든 오픈소스 클라우드 인프라 관리 소프트웨어. NHN Cloud는 이 기술 위에서 동작합니다">OpenStack</span> 기반 퍼블릭 클라우드) 위에 만드는 것입니다. 콘솔 접속 → 네트워크(서브넷) 준비 → <span class="term" title="가상 서버 한 대. 클릭 몇 번으로 만들고 지울 수 있는 컴퓨터라고 생각하면 됩니다">인스턴스</span> 5대 생성 → <span class="term" title="사설 IP만 가진 서버에도 인터넷에서 바로 접속할 수 있도록 붙여주는 공인 IP">플로팅 IP</span>로 외부 접속 통로 확보 → 네트워크 인터페이스 추가 구성 → <span class="term" title="원격 서버에 안전하게 접속해 명령어를 입력할 수 있게 해주는 접속 방식">SSH</span> 접속까지, 실제 클라우드 인프라를 구축하는 전체 흐름을 한 번씩 손으로 거칩니다.</p>
+      <ul>
+        <li>대상 플랫폼: NHN Cloud (OpenStack 기반 퍼블릭 클라우드), 콘솔 <code>https://opa.console.nhncloud.com/</code></li>
+        <li>구축 대상: Kubernetes 클러스터용 인스턴스 5대 — Control Plane 1 + Worker 3 + NFS 1</li>
+      </ul>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>서버 5대를 역할별로 나눠 만든다고 생각하면 쉽습니다. Control Plane은 "관제탑"(클러스터 전체 상태를 지켜보고 지시를 내리는 역할), Worker는 "현장 작업자"(실제 작업을 처리하는 서버 3대), NFS는 "공용 창고"(여러 작업자가 함께 쓰는 파일을 보관하는 서버)에 비유할 수 있습니다. 이번 시간에는 이 5대의 빈 서버를 만드는 것까지만 하고, 그 위에 실제 쿠버네티스(관제탑 소프트웨어)를 설치하는 것은 다음 강의에서 진행합니다.</p>
+      </div>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 콘솔로 먼저 만들어보는가</div>
+        <p>인프라를 코드로 자동화(Part Ⅱ의 Terraform)하기 전에 반드시 콘솔에서 직접 만들어보는 이유가 있습니다. 서브넷은 라우팅 테이블에 연결해야 하고, 인스턴스에 네트워크 인터페이스를 추가하려면 먼저 인스턴스를 중지해야 하는 등, 리소스마다 숨어 있는 순서와 의존관계는 문서만 봐서는 잘 와닿지 않습니다. 콘솔에서 클릭 한 번 한 번 직접 겪어봐야 '이 순서가 왜 필요한지'를 체감하고, 그래야 이후 이 과정을 Terraform 코드로 옮길 때 무엇을 자동화해야 하는지 정확히 알 수 있습니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>실무에서 어떤 상황에 적용되는가</div>
+        <p>쿠버네티스 클러스터를 자체 구축(온프레미스/사설 클라우드)할 때 최소 구성이 바로 이 형태입니다 — 클러스터 상태를 관리하는 Control Plane 노드, 실제 워크로드(파드)를 실행하는 Worker 노드 여러 대, 그리고 여러 노드가 파일을 공유해야 할 때 쓰는 NFS 노드. 이 실습에서 만드는 5대 구성은 다음 강의(5강)에서 Kubespray로 실제 쿠버네티스를 설치할 대상 서버이기도 합니다.</p>
+      </div>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">대시보드 접속 → 네트워크 설정 → 인스턴스 생성 및 설정(+플로팅 IP) → 네트워크 인터페이스 설정 → 인스턴스 접속 순서로 진행합니다.</p>
+
+      <h3 id="u1-2">02 · 대시보드 접속</h3>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>실무에서 어떤 상황에 적용되는가</div>
+        <p>이 콘솔은 OpenStack 기반의 NHN Cloud 퍼블릭 클라우드지만, '대시보드 로그인 → 프로젝트 선택 → 리소스 메뉴' 라는 구조 자체는 AWS/Azure/GCP 등 다른 퍼블릭 클라우드 콘솔에도 그대로 적용되는 공통 패턴입니다.</p>
+      </div>
+
+      <ol class="steps">
+        <li><h4>콘솔 접속</h4><code>https://opa.console.nhncloud.com/</code> 접속 → 메일로 수신된 NHN Cloud 계정안내메일에서 비밀번호를 변경하여 로그인.</li>
+        <li><h4>프로젝트 선택</h4>로그인 후 대시보드 진입 → 프로젝트 목록에서 배정된 프로젝트(예: "숭실대학교" 프로젝트) 선택.</li>
+      </ol>
+
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p004_x61.png" alt="NHN Cloud 콘솔 로그인 화면, 아이디/비밀번호 입력, 이노그리드 클라우드 OPA 로그인">
+        <figcaption>NHN Cloud 콘솔 로그인 화면(아이디/비밀번호 입력, "이노그리드 클라우드 OPA 로그인")</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p005_x79.png" alt="로그인 후 프로젝트 목록 드롭다운 화면">
+        <figcaption>로그인 후 프로젝트 목록 드롭다운(Edu, 숭실대학교0~8 등)</figcaption>
+      </figure>
+
+      <h3 id="u1-3">03 · 네트워크 설정 — 서브넷 생성 · 라우팅 테이블 연결</h3>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이 작업을 하는가</div>
+        <p><span class="term" title="Virtual Private Cloud — 클라우드 안에 분리해 놓은 내 전용 가상 네트워크 공간">VPC</span>(가상 네트워크 공간)는 프로젝트에 이미 준비되어 있지만(Default Network, 192.168.0.0/16), 그 큰 대역을 그대로 쓰면 다른 교육생과 IP가 겹칩니다. 그래서 VPC 안에서 내가 쓸 IP 구간만 별도로 잘라내는 것이 <span class="term" title="VPC라는 큰 네트워크 대역 안에서, 내가 쓸 IP 구간만 별도로 나눠낸 작은 네트워크 조각">서브넷</span> 생성입니다. 서브넷을 만든 뒤 라우팅 테이블에 연결하지 않으면 이 서브넷은 외부(인터넷)와 통신할 경로가 없는 '고립된 네트워크'로 남습니다 — 3강에서 배운 'Routing은 Internet Gateway와 연결 필수'라는 제약이 여기서 그대로 적용됩니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>아파트 단지에 비유하면 이해하기 쉽습니다. VPC는 "단지 전체 부지", 서브넷은 그 부지 안에서 내가 배정받은 "한 개 동"입니다. 그런데 동을 새로 지어도 정문 출입 명단(라우팅 테이블)에 등록하지 않으면 그 동 주민은 단지 밖으로 나갈 수 없는 것과 같습니다 — 그래서 서브넷을 만든 직후 반드시 라우팅 테이블 연결까지 해줘야 외부(인터넷)와 통할 수 있습니다.</p>
+      </div>
+
+      <ol class="steps">
+        <li><h4>서브넷 생성</h4><code>[Network] → [Subnet] → [서브넷생성]</code> 클릭 → VPC(Default Network, <code>192.168.0.0/16</code>) 선택 → 이름 <code>edu{교육생번호}-subnet</code> 입력 → <span class="term" title="IP 주소 범위를 숫자로 표기하는 방법. 예: 192.168.1.0/24 는 192.168.1.0~192.168.1.255 범위를 뜻함">CIDR</span>을 VPC 범위 내에서 설정(예: <code>192.168.1.0/24</code>).</li>
+        <li><h4>생성 확인</h4>서브넷 생성 성공 팝업 확인.</li>
+        <li><h4>라우팅 테이블 연결</h4><code>[Network] → [Subnet]</code> 목록에서 방금 만든 서브넷 체크 → <code>[라우팅테이블연결]</code> 클릭 → 예시와 동일한 라우팅 테이블인지 확인.</li>
+      </ol>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">아래는 VPC 대역 안에서 교육생별 서브넷 CIDR을 어떻게 나눠 쓰는지 보여주는 값 예시입니다.</p>
+      <pre><code>VPC network        : 192.168.0.0/16 (Default Network)
+서브넷 CIDR 예시1   : 192.168.1.0/24  (192.168.1.1 ~ 192.168.1.255)
+서브넷 CIDR 예시2   : 192.168.2.0/24  (192.168.2.1 ~ 192.168.2.255)
+이름 규칙           : edu{교육생번호}-subnet</code></pre>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>왜 CIDR을 VPC 범위 안에서만 정해야 하는가</div>
+        <p>서브넷은 VPC라는 큰 IP 대역을 잘라서 쓰는 것이므로, 서브넷의 CIDR은 반드시 VPC의 CIDR 범위 안에 있어야 합니다(예: VPC가 <code>192.168.0.0/16</code>이면 서브넷은 <code>192.168.0.0~192.168.255.255</code> 범위 안에서만 만들 수 있습니다). 이 규칙이 있기 때문에 같은 VPC를 함께 쓰는 여러 교육생이 각자 다른 서브넷 대역(<code>192.168.1.0/24</code>, <code>192.168.2.0/24</code> …)을 나눠 가져도 IP가 서로 겹치지 않습니다.</p>
+      </div>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>주의</div>
+        <p>서브넷을 만들어도 라우팅 테이블에 연결하지 않으면 이후 인스턴스에 플로팅 IP를 연결해도 외부에서 접속할 수 없습니다. 순서를 헷갈리지 않도록 서브넷 생성 직후 바로 라우팅 테이블 연결까지 마치는 것이 안전합니다.</p>
+      </div>
+
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p006_x90.png" alt="Network Subnet 메뉴 진입 화면, 기존 서브넷 목록">
+        <figcaption>[Network]→[Subnet] 메뉴 진입 화면, 기존 서브넷(Default Network, 192.168.0.0/24) 목록</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p006_x92.png" alt="서브넷 생성 폼, 이름 VPC CIDR 입력 예시">
+        <figcaption>서브넷 생성 폼 — 이름 edu1-subnet, VPC Default Network(192.168.0.0/16), CIDR 192.168.1.0/24 입력 예시</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p008_x124.png" alt="서브넷 목록에서 라우팅테이블연결 버튼을 선택한 화면">
+        <figcaption>서브넷 목록(edu00~edu13-subnet 등)에서 [라우팅테이블연결] 버튼을 선택한 화면</figcaption>
+      </figure>
+
+      <h3 id="u1-4">04 · 인스턴스 생성 및 설정</h3>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이 작업을 하는가</div>
+        <p>5대를 한 번에 만드는 이유는 쿠버네티스 클러스터의 최소 구성 때문입니다. 클러스터 상태를 관리하는 Control Plane(마스터) 1대, 실제 워크로드를 실행하는 Worker 노드 3대, 그리고 여러 노드가 파일을 공유할 때 쓰는 NFS 노드 1대 — 역할이 다른 노드를 처음부터 구분해서 만들어 두어야 다음 강의에서 각 노드에 알맞은 쿠버네티스 구성요소(마스터 컴포넌트 vs kubelet)를 설치할 수 있습니다.</p>
+      </div>
+
+      <ol class="steps">
+        <li><h4>메뉴 진입</h4><code>[Compute] → [Instance] → [인스턴스생성]</code> 클릭.</li>
+        <li><h4>이미지 선택</h4>공용 이미지 탭에서 검색어 <code>ubuntu</code> 입력 → <strong>Ubuntu Server 22.04 LTS</strong> 선택.</li>
+        <li><h4>인스턴스 정보 입력</h4>가용성 영역 <code>kr-pub-a</code>, 인스턴스 이름 <code>edu{교육생번호}-cluster</code>, 인스턴스 타입 <code>r2.c2m8</code>(검색어 <code>r2</code>로 빠르게 찾기), 인스턴스 수 <code>5</code>, 루트 <span class="term" title="서버에 연결하는 저장공간. 하드디스크와 비슷한 역할을 합니다">블록 스토리지</span> SSD <code>50GB</code>.</li>
+        <li><h4>키페어 생성</h4><span class="term" title="서버에 비밀번호 없이도 안전하게 접속하기 위한 공개키/개인키 한 쌍">키페어</span> 이름 <code>K-PaaS-Key{교육생번호}</code> 입력 → <code>[키페어생성]</code> 클릭.</li>
+        <li><h4>키페어 다운로드</h4>생성된 <span class="term" title="키페어를 저장하는 개인키 파일 형식(.pem). SSH 접속 인증에 씁니다">.pem</span> 파일을 다운로드하여 분실·삭제되지 않도록 안전하게 보관.</li>
+        <li><h4>네트워크 설정</h4><code>[네트워크설정]</code>에서 앞서 만든 교육생 서브넷(<code>edu{번호}-subnet</code>) 선택.</li>
+        <li><h4>최종 확인 & 생성</h4>이미지/가용성영역/이름/타입/인스턴스 수 5/키페어/스토리지/서브넷 값을 재확인 → <code>[인스턴스생성]</code> 클릭.</li>
+      </ol>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>인스턴스 수를 5로 지정하면 내부적으로 무슨 일이 일어나는가</div>
+        <p>'인스턴스 수'에 5를 입력하면 콘솔은 입력한 이름을 접두어로 사용해 <code>edu1-cluster1</code>~<code>edu1-cluster5</code>처럼 순번이 붙은 5개의 개별 인스턴스를 동시에 <span class="term" title="필요한 서버·자원을 실제로 만들어서 쓸 수 있는 상태로 준비하는 과정">프로비저닝</span>합니다. 이 5대는 이미지·타입·루트스토리지·서브넷 설정을 동일하게 공유하지만, 각각 서로 다른 사설 IP를 자동으로 할당받습니다. 다만 이 시점에는 아직 '어떤 인스턴스가 Control Plane인지'는 구분되지 않으므로, 이후 단계(플로팅 IP 연결)에서 사람이 직접 하나를 Control Plane으로 지정해 줍니다.</p>
+      </div>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>주의</div>
+        <p>키페어(<code>.pem</code>)는 생성 시점에만 다운로드할 수 있고 이후에는 다시 받을 수 없습니다. 최초 생성 시 반드시 안전한 곳에 백업해야 하며, 분실 시에는 인스턴스에 새 키를 연결하는 별도 절차가 필요합니다.</p>
+      </div>
+
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p009_x130.png" alt="Compute Instance 메뉴, 인스턴스 생성 전 빈 목록 화면">
+        <figcaption>[Compute]→[Instance] 메뉴, 인스턴스 생성 전 빈 목록 화면</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p010_x135.png" alt="이미지 검색창에 ubuntu 입력 후 Ubuntu Server 22.04 LTS 선택 화면">
+        <figcaption>이미지 검색창에 ubuntu 입력 후 Ubuntu Server 22.04 LTS 선택 화면</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p011_x141.png" alt="인스턴스 정보 입력 폼, 가용성 영역 이름 인스턴스 수 키페어 스토리지 설정">
+        <figcaption>인스턴스 정보 입력 폼 — 가용성 영역 kr-pub-a, 이름 edu1-cluster, 인스턴스 수 5, 키페어 K-PaaS-Key 생성, 루트 블록 스토리지 슬라이더</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p014_x154.png" alt="네트워크 설정 화면, 선택된 서브넷과 플로팅 IP 보안그룹 안내 문구">
+        <figcaption>네트워크 설정 화면 — 선택된 서브넷(Default Network 192.168.0.0/24), 플로팅 IP·보안그룹 안내 문구</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p015_x160.png" alt="생성 전 최종 확인 모달">
+        <figcaption>생성 전 최종 확인 모달 — 이미지/가용성영역/이름/타입/인스턴스 수 5/키페어/루트스토리지 요약</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p016_x167.png" alt="생성 완료된 인스턴스 5개 목록 확인 화면">
+        <figcaption>생성 완료된 인스턴스 5개(edu1-cluster1~edu1-cluster5) 목록 확인 화면</figcaption>
+      </figure>
+
+      <h3 id="u1-5">05 · 플로팅 IP 설정 (Control Plane 전용)</h3>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이 작업을 하는가</div>
+        <p>지금까지 만든 5대 인스턴스는 모두 사설 IP(예: 192.168.1.x)만 가지고 있습니다. 사설 IP는 VPC 내부에서만 통하는 주소라서, 로컬 PC에서 인터넷을 거쳐 이 서버에 SSH로 접속하려면 공인 IP가 필요합니다. 이 역할을 하는 것이 Floating IP입니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>회사 전화에 비유하면, 사설 IP는 직원 개개인의 "내선번호"(회사 안에서만 통하는 번호)이고 플로팅 IP는 외부에서 걸 수 있는 "대표번호"(공인 IP)입니다. 이 실습에서는 대표번호(플로팅 IP)를 Control Plane 한 대에만 연결해 두고, Worker·NFS는 내선번호(사설 IP)만 갖게 합니다.</p>
+      </div>
+
+      <ol class="steps">
+        <li><h4>인스턴스 선택</h4>인스턴스 목록에서 Control Plane으로 쓸 인스턴스(예: <code>edu1-cluster1</code>) 체크 → <code>[플로팅 IP 관리]</code> 클릭.</li>
+        <li><h4>플로팅 IP 생성/연결</h4>원하는 IP가 없으면 <code>[+생성]</code> 클릭 → 생성된 플로팅 IP와 네트워크 인터페이스(해당 인스턴스) 선택 → <code>[연결]</code> 클릭.</li>
+        <li><h4>연결 확인</h4>인스턴스 목록에서 해당 인스턴스에 플로팅 IP가 표시되는지 확인.</li>
+      </ol>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>실무에서 어떤 상황에 적용되는가</div>
+        <p>Control Plane 노드 1대에만 플로팅 IP를 연결하는 것이 일반적인 구성입니다. Worker·NFS 노드는 클러스터 내부 통신만 하면 되므로 사설 IP만으로 충분하고, 외부에서는 플로팅 IP를 가진 Control Plane을 통해 먼저 접속한 뒤 내부망으로 다시 SSH 접속하는 방식을 씁니다(07 · 인스턴스 접속에서 실제로 사용).</p>
+      </div>
+
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p017_x170.png" alt="edu1-cluster1 체크 후 뜨는 플로팅 IP 관리 팝업">
+        <figcaption>인스턴스 목록에서 edu1-cluster1 체크 후 뜨는 "플로팅 IP 관리" 팝업 — 플로팅 IP(125.6.37.56) 선택, 네트워크 인터페이스 선택, [연결] 버튼</figcaption>
+      </figure>
+
+      <h3 id="u1-6">06 · 네트워크 인터페이스 설정</h3>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이 작업을 하는가</div>
+        <p>Control Plane 노드에 HA(고가용성) 구성이나 별도 용도(Ingress 등)를 위한 추가 네트워크 통로가 필요할 때, 인스턴스를 새로 만들지 않고 기존 인스턴스에 <span class="term" title="서버가 네트워크에 연결되는 통로 하나. 컴퓨터의 랜카드라고 생각하면 됩니다">네트워크 인터페이스(NIC)</span>만 추가로 붙일 수 있습니다. 이번 실습에서는 이 절차 자체(별도 NIC 생성 → 기존 인스턴스에 연결)를 연습합니다.</p>
+      </div>
+
+      <ol class="steps">
+        <li><h4>인터페이스 생성</h4><code>[Network] → [Network Interface] → [네트워크인터페이스생성]</code> 클릭 → 이름 <code>edu{번호}-Ingress</code> 입력 → VPC/서브넷은 Control Plane 노드와 동일한 것 선택(사설 IP 자동 할당) → <code>[확인]</code>.</li>
+        <li><h4>플로팅 IP 연결(선택)</h4>생성한 인터페이스에도 필요 시 플로팅 IP를 생성/연결.</li>
+        <li><h4>대상 인스턴스 중지</h4><code>[Compute] → [Instance]</code>에서 Control Plane 노드 선택 → <code>[...]</code> 메뉴 → <code>[인스턴스중지]</code>. 인스턴스를 중지하지 않으면 '네트워크 인터페이스 연결 추가' 버튼이 활성화되지 않습니다.</li>
+        <li><h4>인터페이스 연결 추가</h4>중지된 인스턴스 클릭 → <code>[네트워크]</code> 탭 → <code>[네트워크인터페이스연결추가]</code> 클릭.</li>
+        <li><h4>기존 인터페이스 지정</h4><code>[기존 네트워크 인터페이스 지정]</code> 선택 → 1번에서 만든 인터페이스(<code>edu{번호}-Ingress</code>) 선택 → 확인.</li>
+        <li><h4>인스턴스 재시작</h4><code>[인스턴스시작]</code> 클릭.</li>
+      </ol>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>왜 반드시 인스턴스를 중지해야만 NIC를 추가할 수 있는가</div>
+        <p>가상 서버에 네트워크 카드를 새로 꽂는 작업은 물리 서버로 치면 하드웨어 구성을 바꾸는 것과 같습니다. OpenStack은 실행 중인 인스턴스의 네트워크 구성이 예기치 않게 바뀌는 것을 막기 위해, NIC를 추가하려면 먼저 인스턴스를 중지 상태로 만들도록 강제합니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>달리는 차에 부품을 새로 장착할 수 없는 것과 같은 이치입니다. 컴퓨터에 랜카드(NIC)를 하나 더 꽂으려면 전원을 끄고 작업하는 것처럼, 인스턴스도 네트워크 인터페이스를 추가하려면 먼저 멈춰(중지) 세워야 합니다. 즉, "네트워크인터페이스연결추가" 버튼이 안 눌린다면 아직 인스턴스를 중지하지 않았다는 뜻입니다.</p>
+      </div>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>주의</div>
+        <p>실습 중 가장 흔한 실수 — 인스턴스를 중지하지 않은 채로 '네트워크 인터페이스 연결 추가' 버튼을 찾다가 비활성화되어 있는 것을 보고 당황하는 경우가 많습니다. 반드시 <code>[...]→[인스턴스중지]</code>를 먼저 실행하세요.</p>
+      </div>
+
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p020_x185.png" alt="Network Interface 메뉴에서 네트워크인터페이스생성 클릭 화면">
+        <figcaption>[Network]→[Network Interface] 메뉴에서 [네트워크인터페이스생성] 클릭 화면</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p021_x188.jpeg" alt="네트워크 인터페이스 생성 상세 폼, 이름 VPC 서브넷 보안그룹 규칙 목록">
+        <figcaption>네트워크 인터페이스 생성 상세 폼 — 이름 edu1-Ingress, VPC Default Network, 서브넷 항목 선택, 보안그룹 default 규칙 목록</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p022_x196.png" alt="생성한 인터페이스에 플로팅 IP를 연결하는 팝업">
+        <figcaption>생성한 인터페이스(edu1-Ingress)에 플로팅 IP(125.6.37.56)를 연결하는 팝업</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p023_x202.png" alt="인스턴스 목록에서 인스턴스종료(중지) 옵션을 선택하는 화면">
+        <figcaption>인스턴스 목록에서 [...] 메뉴 → [인스턴스종료](중지) 옵션을 선택하는 화면</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p024_x207.png" alt="중지된 인스턴스의 네트워크 탭에서 네트워크인터페이스연결추가 버튼이 활성화된 화면">
+        <figcaption>중지된 인스턴스의 [네트워크] 탭에서 [네트워크인터페이스연결추가] 버튼이 활성화된 화면</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p025_x211.png" alt="네트워크 인터페이스 연결 추가 모달, 기존 네트워크 인터페이스 지정 선택 후 edu1-Ingress 선택">
+        <figcaption>"네트워크 인터페이스 연결 추가" 모달 — [기존 네트워크 인터페이스 지정] 선택 후 edu1-Ingress 선택</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p019_x182.png" alt="edu1-cluster1 인스턴스에 사설 IP 2개와 플로팅 IP 2개가 함께 표시된 최종 확인 화면">
+        <figcaption>모든 설정이 끝난 뒤 edu1-cluster1 인스턴스에 사설 IP 2개(192.168.1.97, 192.168.1.10)와 플로팅 IP 2개(180.210.83.43, 133.186.240.46)가 함께 표시된 최종 확인 화면</figcaption>
+      </figure>
+
+      <h3 id="u1-7">07 · 인스턴스 접속 (SSH)</h3>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이 작업을 하는가</div>
+        <p>Worker·NFS 노드는 플로팅 IP(공인 IP)가 없기 때문에 로컬 PC에서 곧바로 SSH 접속할 수 없습니다. 그래서 플로팅 IP를 가진 Control Plane에 먼저 접속한 뒤, 같은 사설망 안에서 Control Plane이 다시 Worker/NFS로 SSH 접속하는 '점프 호스트(Jump Host)' 패턴을 사용합니다.</p>
+      </div>
+
+      <ol class="steps">
+        <li><h4>키 내용 복사</h4>인스턴스 생성 시 다운로드한 <code>K-PaaS-Key.pem</code> 파일을 열어 키 내용 전체를 복사.</li>
+        <li><h4>Control Plane 접속</h4>SSH 클라이언트(Xshell/MobaXterm)에서 프로토콜 SSH, 사용자명 <code>ubuntu</code>, 호스트에 Control Plane 플로팅 IP 입력, 접속 방법 Public Key → 로컬의 <code>K-PaaS-Key.pem</code> 지정 후 접속.</li>
+        <li><h4>Control Plane 내부에 키 사본 생성</h4><code>vim {파일명}.pem</code> 실행 → Insert 모드(<code>i</code>)로 전환 → 로컬에서 복사한 키 내용 붙여넣기 → <code>Esc</code> → <code>:wq!</code>로 저장 후 종료. (파일명은 Pem Key 이름과 동일하게 설정)</li>
+        <li><h4>권한 변경</h4><code>chmod 600 {pem키파일명}</code> (실행하지 않으면 SSH 접속 시 에러 발생).</li>
+        <li><h4>Worker/NFS 노드 접속</h4><code>ssh -i {pem키파일명} ubuntu@{워커노드 사설 IP}</code>.</li>
+      </ol>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: Control Plane 안에 pem 키 사본을 만들고, 접속에 필요한 권한을 맞춘 뒤, 그 키로 내부망의 Worker 노드에 다시 접속하는 3단계 명령어입니다.</p>
+      <pre><code><span class="cmd-comment"># Control Plane 내부에서 키 사본 만들기</span>
+$ vim K-PaaS-Key3.pem
+<span class="cmd-comment"># i 로 Insert Mode 전환 → 로컬에서 복사한 키 내용 붙여넣기 → Esc → :wq! 로 저장 후 종료</span>
+
+<span class="cmd-comment"># Pem Key 권한 변경 (안 하면 SSH 접속 시 에러)</span>
+$ chmod 600 K-PaaS-Key3.pem
+
+<span class="cmd-comment"># Worker 노드로 접속 (Control Plane 내부에서 실행)</span>
+$ ssh -i K-PaaS-Key3.pem ubuntu@192.168.3.29</code></pre>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>왜 Pem Key를 Control Plane 안에도 복사해 둬야 하는가</div>
+        <p>모든 인스턴스는 생성 시 동일한 키페어(<code>K-PaaS-Key</code>)로 만들어졌기 때문에, Worker/NFS 접속에도 같은 개인키가 필요합니다. 로컬 PC의 키를 Worker에 직접 쓸 수는 없으므로(Worker는 플로팅 IP가 없어 로컬에서 직접 도달 불가), 이미 접속해 있는 Control Plane 내부에 키 사본을 만들어 두고, 그 사본으로 내부망을 통해 Worker/NFS에 다시 접속하는 것입니다.</p>
+      </div>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>주의</div>
+        <p><code>chmod 600</code>을 하지 않으면 SSH 클라이언트가 '개인키 파일의 권한이 너무 열려 있다'는 이유로 접속을 거부합니다. 접속이 안 될 때는 ① 권한(600) ② 키 내용 복붙 과정에서 개행·공백이 깨지지 않았는지를 먼저 확인하세요.</p>
+      </div>
+
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p028_x238.png" alt="SSH 클라이언트 MobaXterm 접속 설정 화면">
+        <figcaption>SSH 클라이언트(MobaXterm) 접속 설정 화면 — Remote host(플로팅 IP), Specify username ubuntu, Use private key 체크 후 .pem 파일 지정</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p030_x251.png" alt="Control Plane 내부 터미널에서 chmod 600 실행 화면">
+        <figcaption>Control Plane 내부 터미널에서 chmod 600 K-PaaS-Key3.pem 실행 화면</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p030_x252.png" alt="ssh 명령으로 Worker 노드에 접속 시도하는 터미널 화면">
+        <figcaption>ssh -i K-PaaS-Key3.pem ubuntu@192.168.3.29 명령으로 Worker 노드에 접속 시도하는 터미널 화면</figcaption>
+      </figure>
+
+      <h3 id="u1-8">08 · (참고) Vim 편집기</h3>
+      <p>명령줄 사용자 인터페이스 기반의 Vi 호환 텍스트 편집기로, Vi에 다양한 기능을 추가한 개선형 편집기입니다. 앞선 07 단계에서 Pem Key 사본을 만들 때 실제로 사용했습니다.</p>
+
+      <pre><code>Insert Mode  --(Esc)-->  Normal Mode  --(:)-->  Command-line Mode
+     ^                        |
+     └────────(i)─────────────┘</code></pre>
+      <ul>
+        <li><code>i</code> : Normal → Insert (텍스트 입력/수정 가능)</li>
+        <li><code>Esc</code> : Insert → Normal</li>
+        <li><code>:</code> : Normal → Command-line</li>
+        <li><code>:wq</code> : 저장 후 종료</li>
+        <li><code>:q!</code> : 저장하지 않고 강제 종료</li>
+      </ul>
+
+      <div class="summary">
+        <div class="box-head">PART Ⅰ 요약</div>
+        <p>콘솔에서 서브넷 → 인스턴스 5대 → 플로팅 IP → 네트워크 인터페이스까지 전부 손으로 만들어봤습니다. 문제는 이 모든 클릭을, 교육생마다 매번, 혹은 같은 환경을 다시 만들어야 할 때마다 반복해야 한다는 점입니다. Part Ⅱ에서는 이 전체 과정을 코드 몇 개 파일로 선언하고, 명령어 한 번으로 재현하는 방법(Terraform)을 다룹니다.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="part2">
+      <div class="unit-kicker">PART Ⅱ</div>
+      <h2>IaC 클라우드 인프라 구축 — Terraform 실습</h2>
+      <p class="unit-lede">Part Ⅰ에서 콘솔로 손수 만든 것과 똑같은 인프라(서브넷 조회, NIC, 인스턴스, 플로팅 IP)를 코드로 선언하고, <code>terraform apply</code> 명령 한 번으로 재현 가능하게 만듭니다.</p>
+
+      <h3 id="u2-1">01 · Terraform이란</h3>
+      <p><span class="term" title="코드로 인프라를 선언하고 자동으로 만들어 주는 오픈소스 도구(HashiCorp 제작)">Terraform</span>은 클라우드 환경에서 인프라 관리를 단순화하는 오픈소스 코드 프로비저닝 도구입니다. 버전관리·재사용·공유가 가능한, 사람이 읽을 수 있는 구성 파일로 클라우드 및 온프레미스 리소스를 모두 정의할 수 있는 코드형 인프라(<span class="term" title="Infrastructure as Code — 인프라를 클릭이 아니라 코드로 작성해서 관리하는 방식">IaC</span>) 도구입니다. 일관된 워크플로우를 사용해 수명주기 전반에 걸쳐 모든 인프라를 프로비저닝·관리할 수 있으며, 컴퓨팅·스토리지·네트워킹 같은 하위 수준 구성요소는 물론 DNS 항목 및 SaaS 기능 같은 상위 수준 구성요소도 관리할 수 있습니다.</p>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>Terraform 코드는 집을 지을 때의 "설계도"와 같습니다. 설계도(코드)에 몇 층짜리 건물을 어떤 구조로 지을지 적어두면, <code>terraform apply</code>는 그 설계도대로 실제 시공을 진행하는 것이고, <code>terraform destroy</code>는 지은 건물을 다시 철거하는 것입니다. 설계도만 잘 보관해 두면 언제든 같은 건물을 다시 짓거나, 다른 부지에 똑같이 지을 수 있습니다 — Part Ⅰ에서 콘솔로 직접 클릭해 지었던 것과 결과물은 같지만, 이번엔 그 과정을 문서(코드)로 남기는 것이 다릅니다.</p>
+      </div>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 콘솔 클릭 대신 코드로 인프라를 관리하는가</div>
+        <p>Part Ⅰ에서 직접 겪었듯, 콘솔 클릭은 '무엇을 몇 번, 어떤 값으로 클릭했는지'가 기록에 남지 않아 재현이 어렵고, 사람이 인스턴스 5대를 만들다 보면 오타나 순서 누락 같은 실수가 생기기 쉽습니다. Terraform은 이 모든 절차를 코드(버전관리 가능한 텍스트 파일)로 선언해 두고, <code>terraform apply</code> 한 번으로 동일하게 재현하거나 <code>terraform destroy</code> 한 번으로 깨끗이 제거할 수 있게 합니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>실무에서 어떤 상황에 적용되는가</div>
+        <p>여러 교육생에게 동일한 5대 클러스터 환경을 반복 배포해야 하는 이 실습 자체가 대표적인 사례입니다. 실무에서는 신규 프로젝트 환경 구성, 재해복구(DR) 환경 복제, 스테이징·운영 환경 동기화 등에 널리 쓰입니다.</p>
+      </div>
+
+      <h3 id="u2-2">02 · 설치 & CLI 명령어</h3>
+
+      <ol class="steps">
+        <li><h4>공식 설치 가이드 확인</h4><code>https://developer.hashicorp.com/terraform/install</code></li>
+        <li><h4>HashiCorp GPG 키 등록</h4></li>
+        <li><h4>리눅스 패키지 저장소 등록</h4></li>
+        <li><h4>패키지 설치</h4></li>
+      </ol>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: HashiCorp가 배포하는 Terraform 설치 패키지 저장소를 우분투 서버에 등록하고, 그 저장소에서 Terraform을 내려받아 설치하는 명령어 3줄입니다.</p>
+      <pre><code>$ wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+$ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+$ sudo apt update && sudo apt install terraform</code></pre>
+
+      <p>Terraform <span class="term" title="Command Line Interface — 마우스 클릭 대신 글자로 명령을 입력해 조작하는 화면(터미널)">CLI</span>는 인프라를 코드로 정의(IaC)하고 배포·관리하는 데 사용하는 명령줄 도구입니다. 코드의 유효성을 검증하고, 실제 배포 전 변경사항을 미리 예측하며, 안전하게 인프라를 생성·삭제하는 것이 핵심 특징입니다. 기본 형태는 <code>terraform [global options] subcommand [args]</code> 입니다.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>명령어</th><th>의미</th></tr></thead>
+          <tbody>
+            <tr><td><code>terraform version</code></td><td>버전 정보를 표시</td></tr>
+            <tr><td><code>terraform init</code></td><td>작업 디렉터리를 초기화(프로바이더 플러그인 설치)</td></tr>
+            <tr><td><code>terraform validate</code></td><td>코드 구문 오류를 확인</td></tr>
+            <tr><td><code>terraform plan</code></td><td>실행 계획을 생성</td></tr>
+            <tr><td><code>terraform apply</code></td><td>인프라 배포(생성/변경)</td></tr>
+            <tr><td><code>terraform destroy</code></td><td>생성된 인프라 삭제</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>실무에서 어떤 상황에 적용되는가</div>
+        <p>이 6개 명령어는 실습에서만 쓰고 끝나는 것이 아니라, 실무에서 인프라를 변경할 때 밟는 표준 절차 그 자체입니다. 예를 들어 팀에서 코드 리뷰(PR) 시점에는 <code>terraform plan</code> 결과를 첨부해 '무엇이 바뀌는지'를 함께 검토하고, 병합 후 배포 <span class="term" title="여러 작업 단계를 순서대로 자동 연결해 놓은 처리 흐름">파이프라인</span>에서 <code>terraform apply</code>를 자동 실행하는 식으로 <span class="term" title="코드를 자동으로 테스트하고 배포하는 일련의 자동화 절차(지속적 통합/지속적 배포)">CI/CD</span>에 그대로 편입됩니다.</p>
+      </div>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>왜 반드시 init → validate → plan → apply 순서인가</div>
+        <p><code>init</code>은 코드에서 선언한 프로바이더(openstack) 플러그인을 내려받아 이 코드를 실행할 수 있는 상태로 만듭니다. <code>validate</code>는 문법 오류를 걸러내고, <code>plan</code>은 '지금 코드와 실제 클라우드 상태를 비교했을 때 무엇이 새로 생성·변경·삭제될지'를 미리 계산해 사람이 검토할 기회를 줍니다. <code>apply</code>는 그 계획을 실제로 실행합니다. 이 미리보기(plan) 단계가 있기 때문에, 오히려 콘솔에서 클릭 몇 번으로 바로 실행되는 것보다 더 안전하게 대규모 인프라를 변경할 수 있습니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>내비게이션에 비유하면, <code>plan</code>은 출발 전 "예상 경로를 미리 보여주는 화면"이고 <code>apply</code>는 실제로 "출발해서 그 경로대로 운전하는 것"입니다. 경로를 미리 확인하지 않고 바로 출발하면 원치 않는 곳으로 갈 수도 있듯, <code>plan</code> 없이 바로 <code>apply</code>부터 하면 의도치 않은 변경이 실제로 적용될 위험이 있습니다.</p>
+      </div>
+
+      <h3 id="u2-3">03 · Terraform 파일 구성과 변수 매핑</h3>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 파일 하나에 다 적지 않고 4개로 나누는가</div>
+        <p><code>provider.tf</code>(인증정보)·<code>main.tf</code>(리소스 정의)·<code>variables.tf</code>(변수 선언)·<code>terraform.tfvars</code>(변수 값)를 분리해두면, 코드 구조(<code>main.tf</code>)와 환경별로 달라지는 값(<code>tfvars</code>), 그리고 절대 공유되면 안 되는 인증정보(<code>provider.tf</code>)의 관심사가 분리됩니다. 그 결과 <code>main.tf</code>는 한 번만 작성해 두고 <code>tfvars</code>만 바꿔서 여러 교육생·여러 환경에 동일한 코드를 재사용할 수 있습니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>요리 레시피에 비유하면, <code>variables.tf</code>는 "어떤 재료가 필요한지 목록"만 적어둔 것이고, <code>terraform.tfvars</code>는 그 목록에 맞춰 "실제로 장 봐온 재료"를 채워 넣은 것입니다. <code>main.tf</code>는 재료 이름이 아니라 "재료 목록의 몇 번"을 쓰라고 적어둔 조리법이라서, 재료(tfvars)만 바꿔 끼우면 같은 조리법(main.tf)으로 다른 요리(다른 교육생의 환경)를 만들 수 있습니다. <code>provider.tf</code>는 이 모든 걸 시작하기 전에 필요한 "출입 신분증"(인증 정보)이라고 보면 됩니다.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>파일</th><th>역할</th></tr></thead>
+          <tbody>
+            <tr><td><code>provider.tf</code></td><td>프로바이더 인증정보 및 기본 리전 설정</td></tr>
+            <tr><td><code>main.tf</code></td><td>인프라의 핵심이 되는 실제 자원(resource)과 조회(data)를 정의</td></tr>
+            <tr><td><code>variables.tf</code></td><td>프로젝트에서 사용할 변수의 이름·타입·설명을 정의(선언)</td></tr>
+            <tr><td><code>terraform.tfvars</code></td><td><code>variables.tf</code>에서 선언한 변수에 실제 값(value)을 대입</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: 위 4개 파일이 실제 프로젝트 폴더 안에서 어떤 이름·구조로 놓이는지 보여주는 예시입니다.</p>
+      <pre><code>project/
+├── README.md
+├── main.tf              # 인프라의 핵심이 되는 실제 자원과 데이터를 정의
+├── variables.tf         # 사용할 변수들의 목록과 타입, 기본값 등을 정의
+├── terraform.tfvars     # 변수들의 실제 값(Value)을 정의
+└── provider.tf          # 프로바이더 인증정보 및 기본 리전 설정</code></pre>
+      <p>Terraform 명령어를 실행하면 실행한 위치의 모든 <code>.tf</code> 파일을 읽어서 실행합니다.</p>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>변수 매핑이 실제로 어떻게 연결되는가</div>
+        <pre><code><span class="cmd-comment"># ① 변수 선언 (variables.tf)</span>
+variable "vpc_name" {
+  description = "vpc 이름"
+  type        = string
+}
+
+<span class="cmd-comment"># ② 변수값 매핑 (terraform.tfvars)</span>
+vpc_name = "Default Network"
+
+<span class="cmd-comment"># ③ 변수 사용 (main.tf)</span>
+data "openstack_networking_network_v2" "nhn-network" {
+  name = var.vpc_name
+}
+
+<span class="cmd-comment"># ④ 결과 — Terraform이 실행 시점에 내부적으로 치환</span>
+data "openstack_networking_network_v2" "nhn-network" {
+  name = "Default Network"
+}</code></pre>
+        <p><code>variables.tf</code>가 '이런 이름의 변수가 있다'를 선언하고, <code>terraform.tfvars</code>가 그 변수에 실제 값을 채워 넣으면, <code>main.tf</code> 안의 <code>var.vpc_name</code>은 실행 시점에 <code>"Default Network"</code>로 치환됩니다. <code>main.tf</code> 자체는 절대 값이 바뀌지 않아도, <code>tfvars</code> 파일만 바꿔 끼우면(예: 교육생마다 다른 subnet_name) 완전히 다른 환경에 똑같은 코드를 재사용할 수 있습니다.</p>
+      </div>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>보안 주의</div>
+        <p><code>provider.tf</code>에는 <code>tenant_id</code>, <code>password</code> 같은 실제 인증 정보가 그대로 들어갑니다. 이런 파일은 절대 Git 같은 공개 저장소에 커밋하면 안 됩니다 — 실습 시 <code>provider.tf</code>를 <code>.gitignore</code>에 추가하거나, 인증값 자체를 <code>tfvars</code>/환경변수로 분리해 관리하는 습관을 들이세요. 아래 <code>provider.tf</code> 예시는 실제 계정 값 대신 자리표시자(placeholder)로 작성되어 있습니다.</p>
+      </div>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: Terraform이 NHN Cloud(OpenStack <span class="term" title="프로그램끼리 서로 데이터를 주고받기 위한 규칙/통로">API</span>)에 접속할 때 쓸 계정 인증 정보와, 사용할 프로바이더(플러그인) 버전을 지정하는 설정 파일입니다.</p>
+      <pre><code>terraform {
+  required_version = ">= 1.0.0"
+  required_providers {
+    openstack = {
+      source  = "terraform-provider-openstack/openstack"
+      version = "~>1.42.0"
+    }
+  }
+}
+provider "openstack" {
+  tenant_id  = "{테넌트ID}"
+  password   = "{API 비밀번호}"
+  auth_url   = "{신원서비스 URL}"
+  user_name  = "{NHN 계정입력}"
+  region     = "{리전}"
+}</code></pre>
+
+      <h3 id="u2-4">04 · main.tf 리소스 정의 상세</h3>
+      <p>Data 블록은 OpenStack에 이미 존재하는 리소스(VPC, Subnet, Security Group, 이미지, 외부 네트워크)를 조회하기 위한 Data Source 정의이고, Resource 블록은 Terraform이 새로 생성·관리할 인프라 객체를 정의합니다.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Data 블록</th><th>조회 대상</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td><code>openstack_networking_network_v2.nhn-network</code></td><td>기존 VPC(Network)</td><td><code>name = var.vpc_name</code></td></tr>
+            <tr><td><code>openstack_networking_subnet_v2.nhn-subnet</code></td><td>특정 VPC 내부의 Subnet</td><td><code>network_id</code>는 위 nhn-network의 id를 참조, <code>name = var.subnet_name</code></td></tr>
+            <tr><td><code>openstack_networking_secgroup_v2.nhn-sg</code></td><td>Security Group</td><td><code>name = var.security_groups_name</code></td></tr>
+            <tr><td><code>openstack_images_image_v2.ubuntu_focal</code></td><td>OS 이미지</td><td><code>name = "Ubuntu Server 22.04.5 LTS (2026.03.10)"</code>(이미지 이름은 변수화하지 않고 그대로 사용), <code>most_recent = var.boolean_type_true</code>로 동일 이름 중 최신 이미지 선택</td></tr>
+            <tr><td><code>openstack_networking_network_v2.ext_network</code></td><td>Public Network(외부망)</td><td><code>name = var.network_type_public</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Resource 블록</th><th>역할</th></tr></thead>
+          <tbody>
+            <tr><td><code>openstack_networking_port_v2.nic</code></td><td>VM이 사용할 네트워크 인터페이스(NIC/Port) 생성 — <code>network_id</code>, <code>fixed_ip.subnet_id</code>, <code>security_group_ids</code> 지정</td></tr>
+            <tr><td><code>openstack_compute_instance_v2.instance1</code></td><td>VM(인스턴스) 생성 — <code>name</code>/<code>availability_zone</code>/<code>flavor_name</code>/<code>key_pair</code> + <code>block_device</code>(부팅 볼륨: <code>uuid</code>=이미지ID, <code>source_type</code>="image", <code>destination_type</code>="volume", <code>delete_on_termination</code>, <code>volume_size</code>, <code>volume_type</code>) + <code>network.port</code>=위에서 만든 nic</td></tr>
+            <tr><td><code>openstack_networking_floatingip_v2.fip_1</code></td><td>Public Network(<code>pool</code>)에서 플로팅 IP 생성</td></tr>
+            <tr><td><code>openstack_compute_floatingip_associate_v2.fip_1</code></td><td>생성한 플로팅 IP를 <code>instance1</code>에 연결(<code>wait_until_associated</code>로 연결 완료까지 대기)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>data와 resource는 무엇이 다른가</div>
+        <p><code>data</code>는 OpenStack에 이미 존재하는 것(기존 VPC, 기존 이미지, 기존 보안그룹)을 '조회만' 해서 ID를 가져오는 블록이고, <code>resource</code>는 Terraform이 새로 '만들고 관리'할 대상(NIC, 인스턴스, 플로팅 IP)을 정의하는 블록입니다. Part Ⅰ 콘솔 실습에서 서브넷·보안그룹처럼 이미 있는 것을 '선택'만 했던 부분이 <code>data</code>로, 인스턴스처럼 새로 '생성'했던 부분이 <code>resource</code>로 그대로 대응됩니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>실무에서 어떤 상황에 적용되는가</div>
+        <p>이미 다른 팀이 만들어 둔 VPC·보안그룹·이미지를 그대로 활용하면서 그 위에 내 리소스만 새로 얹어야 하는 상황(공용 네트워크 팀과 애플리케이션 팀이 분리된 조직 등)에서 <code>data</code>/<code>resource</code> 구분이 그대로 쓰입니다. 이 실습에서 VPC·서브넷·보안그룹·이미지·외부망을 전부 <code>data</code>로 조회만 한 것도, 그 자원들은 관리자가 미리 만들어 둔 공용 자원이고 교육생은 그 위에 NIC·인스턴스·플로팅 IP만 새로 만들면 되기 때문입니다.</p>
+      </div>
+
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p041_x308.png" alt="main.tf의 data 블록 5개 코드 스크린샷">
+        <figcaption>main.tf의 data 블록 5개(nhn-network / nhn-subnet / nhn-sg / ubuntu_focal / ext_network) 코드 스크린샷</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p042_x311.png" alt="variables.tf 변수 선언 예시 코드 스크린샷">
+        <figcaption>variables.tf 변수 선언 예시 — description/type 지정 코드 스크린샷</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/04_IaaS_구축/images/p043_x314.png" alt="terraform.tfvars 값 대입 예시 코드 스크린샷">
+        <figcaption>terraform.tfvars 값 대입 예시 — master_node/worker_node/flavor_name 등 코드 스크린샷</figcaption>
+      </figure>
+
+      <h3 id="u2-5">05 · 실습1 — 하드코딩 버전 (인스턴스 1대)</h3>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이 작업을 하는가</div>
+        <p>처음에는 일부러 변수 없이 값을 코드에 직접 적어(하드코딩) 작성합니다. Terraform 문법 자체(블록 구조, data를 resource에서 참조하는 방식)에 먼저 익숙해지기 위한 디딤돌이며, 다음 실습2에서 이 값들을 변수로 바꿔볼 때 '무엇이, 왜 불편했는지'를 비교할 기준이 됩니다.</p>
+      </div>
+
+      <ol class="steps">
+        <li><h4>provider.tf 작성</h4>본인이 발급받은 테넌트ID/비밀번호/인증URL/계정/리전 입력.</li>
+        <li><h4>main.tf의 data 5개 작성(값 하드코딩)</h4><code>nhn-network</code> name=<code>"Default Network"</code>, <code>nhn-subnet</code> name=<code>"Default"</code>, <code>nhn-sg</code> name=<code>"default"</code>, <code>ubuntu_focal</code> name=<code>"Ubuntu Server 22.04.5 LTS (2026.03.10)"</code> + <code>most_recent=true</code>, <code>ext_network</code> name=<code>"Public Network"</code>.</li>
+        <li><h4>main.tf의 resource 4개 작성</h4><code>nic</code>(name=<code>"nhn-nic01"</code>), <code>instance1</code>(name=<code>"k8s-master"</code>, availability_zone=<code>"kr-pub-a"</code>, flavor_name=<code>"m2.c4m8"</code>, key_pair=<code>"sesac-key"</code>, block_device{volume_size=50, volume_type=<code>"General HDD"</code>, ...}), <code>fip_1</code>(플로팅 IP 생성 + instance1에 연결).</li>
+        <li><h4>실행</h4><code>terraform init</code> → <code>terraform plan</code> → <code>terraform apply</code> 순서로 실행.</li>
+      </ol>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: 기존 VPC·서브넷·보안그룹·이미지·외부망을 조회한 뒤, 그 위에 인스턴스 1대(Control Plane)와 그 인스턴스에 연결할 네트워크 인터페이스·플로팅 IP를 만드는 전체 <code>main.tf</code>입니다. 값은 아직 전부 문자열로 직접 적혀(하드코딩) 있습니다.</p>
+      <pre><code>data "openstack_networking_network_v2" "nhn-network" {
+  name = "Default Network"
+}
+data "openstack_networking_subnet_v2" "nhn-subnet" {
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  name = "Default"
+}
+data "openstack_networking_secgroup_v2" "nhn-sg" {
+  name = "default"
+}
+data "openstack_images_image_v2" "ubuntu_focal" {
+  name = "Ubuntu Server 22.04.5 LTS (2026.03.10)"
+  most_recent = true
+}
+data "openstack_networking_network_v2" "ext_network" {
+  name = "Public Network"
+}
+
+resource "openstack_networking_port_v2" "nic" {
+  name = "nhn-nic01"
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  fixed_ip {
+    subnet_id = data.openstack_networking_subnet_v2.nhn-subnet.id
+  }
+  security_group_ids = [
+    data.openstack_networking_secgroup_v2.nhn-sg.id
+  ]
+}
+
+resource "openstack_compute_instance_v2" "instance1" {
+  name              = "k8s-master"
+  availability_zone = "kr-pub-a"
+  flavor_name       = "m2.c4m8"
+  key_pair          = "sesac-key"
+  block_device {
+    uuid                  = data.openstack_images_image_v2.ubuntu_focal.id
+    source_type           = "image"
+    destination_type      = "volume"
+    delete_on_termination = true
+    volume_size           = 50
+    volume_type           = "General HDD"
+  }
+  network {
+    port = openstack_networking_port_v2.nic.id
+  }
+}
+
+resource "openstack_networking_floatingip_v2" "fip_1" {
+  pool = data.openstack_networking_network_v2.ext_network.name
+}
+resource "openstack_compute_floatingip_associate_v2" "fip_1" {
+  floating_ip = openstack_networking_floatingip_v2.fip_1.address
+  instance_id = openstack_compute_instance_v2.instance1.id
+  wait_until_associated = true
+}</code></pre>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: 위에서 작성한 코드를 초기화(init) → 미리보기(plan) → 실제 배포(apply)까지 순서대로 실행하는 명령 3줄입니다.</p>
+      <pre><code>$ terraform init
+$ terraform plan
+$ terraform apply</code></pre>
+
+      <h3 id="u2-6">06 · 실습2 — 변수화 버전</h3>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이 작업을 하는가</div>
+        <p>실습1의 <code>main.tf</code>는 <code>"k8s-master"</code>, <code>"kr-pub-a"</code> 같은 값이 코드 곳곳에 박혀 있어, 이 코드를 다른 환경에 재사용하려면 코드 자체를 일일이 고쳐야 합니다. 값을 <code>variables.tf</code>(무엇을 입력받을지 선언) + <code>terraform.tfvars</code>(실제 값)로 분리하면, <code>main.tf</code>는 한 번만 작성해 두고 <code>tfvars</code> 파일만 바꿔서 여러 환경(교육생마다, 서버마다)에 동일한 코드를 재사용할 수 있습니다.</p>
+      </div>
+
+      <ol class="steps">
+        <li><h4>변수 치환</h4><code>main.tf</code>의 하드코딩 값을 전부 <code>var.xxx</code>로 치환.</li>
+        <li><h4>변수 선언</h4><code>variables.tf</code>에 아래 15개 변수를 타입과 함께 선언.</li>
+        <li><h4>값 대입</h4><code>terraform.tfvars</code>에 실제 값 대입.</li>
+        <li><h4>실행</h4><code>terraform init</code> → <code>terraform plan</code> → <code>terraform apply</code>.</li>
+      </ol>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>하드코딩 값(실습1)</th><th>변수명(실습2)</th><th>타입</th></tr></thead>
+          <tbody>
+            <tr><td><code>"Default Network"</code></td><td><code>vpc_name</code></td><td>string</td></tr>
+            <tr><td><code>"Default"</code></td><td><code>subnet_name</code></td><td>string</td></tr>
+            <tr><td><code>"default"</code></td><td><code>security_groups_name</code></td><td>string</td></tr>
+            <tr><td><code>true</code>(most_recent) / <code>true</code>(delete_on_termination)</td><td><code>boolean_type_true</code></td><td>bool</td></tr>
+            <tr><td><code>"Public Network"</code></td><td><code>network_type_public</code></td><td>string</td></tr>
+            <tr><td><code>"k8s-master"</code></td><td><code>master_node</code></td><td>string</td></tr>
+            <tr><td>(신규, worker 노드 목록)</td><td><code>worker_node</code></td><td>list(string)</td></tr>
+            <tr><td><code>"kr-pub-a"</code></td><td><code>availability_zone</code></td><td>string</td></tr>
+            <tr><td><code>"m2.c4m8"</code></td><td><code>flavor_name</code></td><td>string</td></tr>
+            <tr><td><code>"sesac-key"</code></td><td><code>key_pair</code></td><td>string</td></tr>
+            <tr><td><code>"image"</code></td><td><code>source_type</code></td><td>string</td></tr>
+            <tr><td><code>"volume"</code></td><td><code>destination_type</code></td><td>string</td></tr>
+            <tr><td><code>50</code></td><td><code>volume_size</code></td><td>number</td></tr>
+            <tr><td><code>"General HDD"</code></td><td><code>volume_type</code></td><td>string</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: 위 표에 나온 변수 이름 15개를 <code>variables.tf</code>에 '이런 이름과 타입의 값을 입력받겠다'고 선언만 해 두는 코드입니다(아직 실제 값은 없습니다).</p>
+      <pre><code>variable "vpc_name" { type = {타입} }
+variable "subnet_name" { type = {타입} }
+variable "security_groups_name" { type = {타입} }
+variable "boolean_type_true" { type = {타입} }
+variable "network_type_public" { type = {타입} }
+variable "master_node" { type = {타입} }
+variable "worker_node" { type = {타입} }
+variable "nfs_server" { type = {타입} }
+variable "availability_zone" { type = {타입} }
+variable "flavor_name" { type = {타입} }
+variable "key_pair" { type = {타입} }
+variable "source_type" { type = {타입} }
+variable "destination_type" { type = {타입} }
+variable "volume_size" { type = {타입} }
+variable "volume_type" { type = {타입} }</code></pre>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: 바로 위에서 선언한 변수 하나하나에 실제 값(서브넷 이름, 서버 이름, 사양 등)을 채워 넣는 파일입니다. 빈 칸(<code>""</code>)은 직접 채워야 합니다.</p>
+      <pre><code>vpc_name = ""
+subnet_name = ""
+security_groups_name = ""
+boolean_type_true =
+network_type_public = ""
+master_node = ""
+worker_node = ["", "", ""]
+nfs_server = ""
+availability_zone = ""
+flavor_name = ""
+key_pair = ""
+source_type = ""
+destination_type = ""
+volume_size =
+volume_type = ""</code></pre>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>주의</div>
+        <p><code>variables.tf</code>에 타입만 선언하고 기본값(<code>default</code>)을 주지 않으면, <code>terraform.tfvars</code>에 값이 비어 있을 때 <code>terraform plan</code> 실행 시 CLI가 터미널에서 값을 직접 입력하라고 물어봅니다. 실습에서 <code>tfvars</code> 파일 채우기를 빠뜨리기 쉬우니 변수 선언과 값 대입을 항상 짝지어 확인하세요.</p>
+      </div>
+
+      <h3 id="u2-7">07 · 실습3(과제) — 인스턴스 5대로 확장</h3>
+      <p>Terraform 실습 두 번째에서 작성한 파일에서 인스턴스 개수를 4개 더 작성하여 총 5대의 인스턴스를 배포하는 테라폼 파일을 작성하시오. (Master 1대, Worker 3대, NFS 1대) — 원본 과제 문구</p>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이 작업을 하는가</div>
+        <p><code>resource</code> 블록은 기본적으로 '블록 하나 = 리소스 하나'입니다. 역할이 다른 서버(master / worker1~3 / nfs)를 각각 만들려면 <code>nic</code>/<code>instance</code> 블록을 필요한 만큼 복사해 이름(레이블)만 바꿔 반복 작성해야 합니다. (규모가 훨씬 크다면 <code>count</code>/<code>for_each</code>로 반복을 줄일 수 있지만, 이 실습에서는 노드마다 역할이 달라 개별 블록으로 명시적으로 작성합니다.)</p>
+      </div>
+
+      <ol class="steps">
+        <li><h4>NIC 블록 추가</h4><code>nic2</code>~<code>nic5</code> 블록 추가 — 각각 <code>name = var.nic_name[n]</code>, 나머지는 <code>nic</code>과 동일하게 <code>network_id</code>/<code>subnet_id</code>/<code>security_group_ids</code> 참조.</li>
+        <li><h4>Worker 인스턴스 블록 추가</h4><code>instance2</code>~<code>instance4</code>(worker1~3) 블록 추가 — <code>name = var.worker_node[n]</code>, <code>flavor_name</code>/<code>availability_zone</code>/<code>key_pair</code>/<code>block_device</code>는 master와 동일, <code>network.port</code>만 각자의 <code>nic</code>을 참조.</li>
+        <li><h4>NFS 인스턴스 블록 추가</h4><code>instance5</code>(nfs) 블록 추가 — <code>name = var.nfs_server</code>.</li>
+        <li><h4>플로팅 IP는 master 전용</h4>플로팅 IP(<code>fip_1</code>)는 master(<code>instance1</code>)에만 연결 — Worker/NFS는 사설 IP만 사용(Part Ⅰ 콘솔 실습과 동일한 설계).</li>
+        <li><h4>변수 추가</h4><code>variables.tf</code>에 <code>nic_name</code>(list(string)) 변수 추가.</li>
+        <li><h4>값 대입</h4><code>terraform.tfvars</code>에 5개 이름을 담은 목록 대입.</li>
+        <li><h4>실행</h4><code>terraform init</code> → <code>terraform validate</code> → <code>terraform plan</code> → <code>terraform apply</code>.</li>
+      </ol>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">실제 완성 파일은 <code>main.tf</code>/<code>variables.tf</code>/<code>terraform.tfvars</code>(프로젝트 루트, <code>00_강의정리</code>의 상위 폴더)에 있습니다. 해당 파일의 <code>subnet_name</code>/<code>security_groups_name</code>/<code>master_node</code>/<code>worker_node</code>/<code>nfs_server</code> 값은 특정 교육생의 개인 식별 값이라 마스킹되어 있으므로, 아래에는 Part Ⅰ에서 이미 쓴 명명 규칙(<code>edu{번호}-master</code>, <code>edu{번호}-worker1~3</code>, <code>edu{번호}-nfs</code>)을 예시 값으로 사용한 완성본 발췌(마스터 + worker1, 전체 패턴은 이 두 블록의 반복)를 실었습니다.</p>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: 실습2 코드를 그대로 두고 <code>nic</code>/<code>instance</code> 블록만 5벌로 늘려서, master 1대·worker 3대·nfs 1대 총 5대를 변수 기반으로 만드는 코드입니다(아래는 master+worker1 두 블록만 발췌).</p>
+      <pre><code>data "openstack_networking_network_v2" "nhn-network" {
+  name = var.vpc_name
+}
+data "openstack_networking_subnet_v2" "nhn-subnet" {
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  name = var.subnet_name
+}
+data "openstack_networking_secgroup_v2" "nhn-sg" {
+  name = var.security_groups_name
+}
+data "openstack_images_image_v2" "ubuntu_focal" {
+  name = "Ubuntu Server 22.04.5 LTS (2026.03.10)"
+  most_recent = var.boolean_type_true
+}
+data "openstack_networking_network_v2" "ext_network" {
+  name = var.network_type_public
+}
+
+<span class="cmd-comment"># ----- master -----</span>
+resource "openstack_networking_port_v2" "nic" {
+  name = var.nic_name[0]
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  fixed_ip { subnet_id = data.openstack_networking_subnet_v2.nhn-subnet.id }
+  security_group_ids = [data.openstack_networking_secgroup_v2.nhn-sg.id]
+}
+resource "openstack_compute_instance_v2" "instance1" {
+  name = var.master_node
+  availability_zone = var.availability_zone
+  flavor_name = var.flavor_name
+  key_pair = var.key_pair
+  block_device {
+    uuid = data.openstack_images_image_v2.ubuntu_focal.id
+    source_type = var.source_type
+    destination_type = var.destination_type
+    delete_on_termination = var.boolean_type_true
+    volume_size = var.volume_size
+    volume_type = var.volume_type
+  }
+  network { port = openstack_networking_port_v2.nic.id }
+}
+<span class="cmd-comment"># master에만 Floating IP 연결</span>
+resource "openstack_networking_floatingip_v2" "fip_1" {
+  pool = data.openstack_networking_network_v2.ext_network.name
+}
+resource "openstack_compute_floatingip_associate_v2" "fip_1" {
+  floating_ip = openstack_networking_floatingip_v2.fip_1.address
+  instance_id = openstack_compute_instance_v2.instance1.id
+  wait_until_associated = var.boolean_type_true
+}
+
+<span class="cmd-comment"># ----- worker1 (worker2/3, nfs는 동일 패턴으로 nic3~nic5 / instance3~instance5 반복) -----</span>
+resource "openstack_networking_port_v2" "nic2" {
+  name = var.nic_name[1]
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  fixed_ip { subnet_id = data.openstack_networking_subnet_v2.nhn-subnet.id }
+  security_group_ids = [data.openstack_networking_secgroup_v2.nhn-sg.id]
+}
+resource "openstack_compute_instance_v2" "instance2" {
+  name = var.worker_node[0]
+  availability_zone = var.availability_zone
+  flavor_name = var.flavor_name
+  key_pair = var.key_pair
+  block_device {
+    uuid = data.openstack_images_image_v2.ubuntu_focal.id
+    source_type = var.source_type
+    destination_type = var.destination_type
+    delete_on_termination = var.boolean_type_true
+    volume_size = var.volume_size
+    volume_type = var.volume_type
+  }
+  network { port = openstack_networking_port_v2.nic2.id }
+}
+<span class="cmd-comment"># instance3(worker2)/nic3, instance4(worker3)/nic4, instance5(nfs, var.nfs_server)/nic5 도 동일 패턴</span></code></pre>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span><code>terraform destroy</code>는 왜 신중해야 하는가</div>
+        <p><code>terraform destroy</code>는 상태 파일에 기록된 모든 리소스(인스턴스 5대 + NIC 5개 + 플로팅 IP까지) 전부를 한 번에 삭제합니다. 실습이 끝나면 비용 절감을 위해 <code>destroy</code>를 실행하지만, 운영 환경에서는 반드시 <code>terraform plan</code>으로 삭제 대상부터 먼저 확인해야 합니다.</p>
+      </div>
+
+      <div class="summary">
+        <div class="box-head">PART Ⅱ 요약</div>
+        <p>콘솔에서 30번 넘게 클릭해야 했던 작업이 <code>terraform apply</code> 명령 한 줄로 재현됩니다. 다음 강의(5강 · K8S 클러스터 설치)에서는 오늘 만든 이 5대의 우분투 서버 위에 실제로 쿠버네티스를 설치합니다.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="lab-0709">
+      <div class="unit-kicker">LAB ARCHIVE</div>
+      <h2>실전 실습 자료 (2026-07-09 수업)</h2>
+      <p class="unit-lede">이 절은 실제 2026-07-09 수업에서 진행한 실습 원본 파일입니다. Part Ⅱ에서 설명한 하드코딩 → 변수화 흐름을, 그날 학생이 직접 작성한 Terraform 코드 3단계(tf1 → tf2 → tf3)와 다음 날(2026-07-10) 수업의 복습 문제 원본으로 그대로 확인합니다.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>버전</th><th>인스턴스 구성</th><th>값 관리 방식</th><th>파일 구성</th></tr></thead>
+          <tbody>
+            <tr><td>tf1</td><td>1대 (마스터만)</td><td>모든 값 하드코딩</td><td><code>main.tf</code> + <code>provider.tf</code></td></tr>
+            <tr><td>tf2</td><td>5대 (마스터1+워커3+NFS1)</td><td>여전히 하드코딩 — <code>nic</code>/<code>instance</code> 블록 5쌍을 그대로 복사·반복</td><td><code>main.tf</code> + <code>provider.tf</code></td></tr>
+            <tr><td>tf3</td><td>5대 (tf2와 동일 인프라)</td><td><code>variables.tf</code> + <code>terraform.tfvars</code>로 변수화</td><td><code>main.tf</code> + <code>variables.tf</code> + <code>terraform.tfvars</code> + <code>provider.tf</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>보안 마스킹 안내</div>
+        <p>아래 <code>provider.tf</code>는 tf1/tf2/tf3 세 폴더 모두 내용이 동일하며, 원본에는 실제 NHN Cloud 계정의 <code>tenant_id</code>·<code>password</code>·<code>user_name</code> 값이 평문으로 들어 있었습니다. 이 세 값만 <code>&lt;본인 tenant_id&gt;</code> 등 자리표시자로 가리고, 나머지(서브넷/보안그룹/인스턴스 이름 등 리소스 이름)는 원본 그대로 실었습니다.</p>
+      </div>
+
+      <h3 id="lab-0709-1">01 · tf1 원본 — 인스턴스 1대, 하드코딩</h3>
+      <p>가장 처음 작성한 버전입니다. Control Plane 역할의 인스턴스 1대만 만들며, VPC·서브넷·이미지·인스턴스 사양 등 모든 값이 <code>main.tf</code> 안에 문자열로 직접 박혀 있습니다(Part Ⅱ의 05 · 실습1에서 설명한 것과 같은 구조 — 여기서는 그 날 실제로 제출된 학생 코드 원본을 그대로 보여줍니다).</p>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: 이 교육생 계정으로 NHN Cloud에 인증하기 위한 설정 파일입니다(실제 tenant_id·비밀번호·계정명은 자리표시자로 가려져 있습니다).</p>
+      <pre><code>terraform {
+  required_version = &quot;&gt;= 1.0.0&quot;
+  required_providers {
+    openstack = {
+      source  = &quot;terraform-provider-openstack/openstack&quot;
+      version = &quot;~&gt;1.42.0&quot;
+    }
+  }
+}
+provider &quot;openstack&quot; {
+  tenant_id = &quot;&lt;본인 tenant_id&gt;&quot;
+  password = &quot;&lt;본인 비밀번호&gt;&quot;
+  auth_url = &quot;https://api-identity-infrastructure.nhncloudservice.com/v2.0&quot;
+  user_name = &quot;&lt;본인 계정&gt;&quot;
+  region = &quot;KR1&quot;
+}</code></pre>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: 기존 네트워크·서브넷·보안그룹·이미지·외부망을 조회한 뒤, 인스턴스 1대(master)와 그 인스턴스에 연결할 네트워크 인터페이스·플로팅 IP를 만드는 코드입니다.</p>
+      <pre><code>data &quot;openstack_networking_network_v2&quot; &quot;nhn-network&quot; {
+  name = &quot;Default Network&quot;
+}
+data &quot;openstack_networking_subnet_v2&quot; &quot;nhn-subnet&quot; {
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  name = &quot;jinyung0101-subnet&quot;
+}
+data &quot;openstack_networking_secgroup_v2&quot; &quot;nhn-sg&quot; {
+  name = &quot;jinyung0101&quot;
+}
+data &quot;openstack_images_image_v2&quot; &quot;ubuntu_focal&quot; {
+  name = &quot;Ubuntu Server 22.04.5 LTS (2026.03.10)&quot;
+  most_recent = true
+}
+data &quot;openstack_networking_network_v2&quot; &quot;ext_network&quot; {
+  name = &quot;Public Network&quot;
+}
+
+resource &quot;openstack_networking_port_v2&quot; &quot;nic&quot; {
+  name = &quot;nhn-nic01&quot;
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  fixed_ip {
+    subnet_id = data.openstack_networking_subnet_v2.nhn-subnet.id
+  }
+  security_group_ids = [
+    data.openstack_networking_secgroup_v2.nhn-sg.id
+  ]
+}
+
+resource &quot;openstack_compute_instance_v2&quot; &quot;instance1&quot; {
+  name = &quot;jinyung0101-master&quot;
+  availability_zone = &quot;kr-pub-a&quot;
+  flavor_name = &quot;r2.c2m8&quot;
+  key_pair = &quot;jinyung0101&quot;
+
+  block_device {
+    uuid = data.openstack_images_image_v2.ubuntu_focal.id
+    source_type = &quot;image&quot;
+    destination_type = &quot;volume&quot;
+    delete_on_termination = true
+    volume_size = 50
+    volume_type = &quot;General HDD&quot;
+  }
+  network {
+    port = openstack_networking_port_v2.nic.id
+  }
+}
+
+resource &quot;openstack_networking_floatingip_v2&quot; &quot;fip_1&quot; {
+  pool= data.openstack_networking_network_v2.ext_network.name
+}
+resource &quot;openstack_compute_floatingip_associate_v2&quot; &quot;fip_1&quot; {
+  floating_ip = openstack_networking_floatingip_v2.fip_1.address
+  instance_id = openstack_compute_instance_v2.instance1.id
+  wait_until_associated = true
+}</code></pre>
+
+      <h3 id="lab-0709-2">02 · tf2 원본 — 마스터+워커3+NFS 5대, 여전히 하드코딩</h3>
+      <p>목표 인프라(Control Plane 1 + Worker 3 + NFS 1, 총 5대)로 확장한 버전입니다. 아직 변수를 쓰지 않았기 때문에, <code>nic</code>/<code>instance</code> 리소스 블록을 5벌 그대로 복사·붙여넣기해서 이름(<code>nic2</code>~<code>nic5</code>, <code>instance2</code>~<code>instance5</code>)만 바꿔 반복 작성했습니다. <code>provider.tf</code>는 tf1과 완전히 동일합니다.</p>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>이 반복이 왜 문제인가</div>
+        <p>인스턴스 사양(<code>flavor_name</code>, <code>availability_zone</code>, <code>volume_size</code>, <code>volume_type</code> 등)을 바꾸려면 5개 블록을 전부 찾아 똑같이 고쳐야 합니다. 아래 tf2 <code>main.tf</code> 전체를 보면 <code>block_device</code> 설정이 5번 그대로 복제되어 있는 것이 눈에 보입니다 — 다음 단계(tf3)에서 이 반복을 변수로 없앱니다.</p>
+      </div>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: tf1의 nic·instance 블록을 그대로 복사해서 5벌(master+worker1~3+nfs)로 늘려, 목표 인프라(5대)를 하드코딩 값 그대로 만드는 코드입니다.</p>
+      <pre><code>data &quot;openstack_networking_network_v2&quot; &quot;nhn-network&quot; {
+  name = &quot;Default Network&quot;
+}
+data &quot;openstack_networking_subnet_v2&quot; &quot;nhn-subnet&quot; {
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  name = &quot;jinyung0101-subnet&quot;
+}
+data &quot;openstack_networking_secgroup_v2&quot; &quot;nhn-sg&quot; {
+  name = &quot;jinyung0101&quot;
+}
+data &quot;openstack_images_image_v2&quot; &quot;ubuntu_focal&quot; {
+  name = &quot;Ubuntu Server 22.04.5 LTS (2026.03.10)&quot;
+  most_recent = true
+}
+data &quot;openstack_networking_network_v2&quot; &quot;ext_network&quot; {
+  name = &quot;Public Network&quot;
+}
+
+resource &quot;openstack_networking_port_v2&quot; &quot;nic&quot; {
+  name = &quot;nhn-nic01&quot;
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  fixed_ip {
+    subnet_id = data.openstack_networking_subnet_v2.nhn-subnet.id
+  }
+  security_group_ids = [
+    data.openstack_networking_secgroup_v2.nhn-sg.id
+  ]
+}
+
+resource &quot;openstack_compute_instance_v2&quot; &quot;instance1&quot; {
+  name = &quot;jinyung0101-master&quot;
+  availability_zone = &quot;kr-pub-a&quot;
+  flavor_name = &quot;r2.c2m8&quot;
+  key_pair = &quot;jinyung0101&quot;
+
+  block_device {
+    uuid = data.openstack_images_image_v2.ubuntu_focal.id
+    source_type = &quot;image&quot;
+    destination_type = &quot;volume&quot;
+    delete_on_termination = true
+    volume_size = 50
+    volume_type = &quot;General HDD&quot;
+  }
+  network {
+    port = openstack_networking_port_v2.nic.id
+  }
+}
+
+resource &quot;openstack_networking_floatingip_v2&quot; &quot;fip_1&quot; {
+  pool= data.openstack_networking_network_v2.ext_network.name
+}
+resource &quot;openstack_compute_floatingip_associate_v2&quot; &quot;fip_1&quot; {
+  floating_ip = openstack_networking_floatingip_v2.fip_1.address
+  instance_id = openstack_compute_instance_v2.instance1.id
+  wait_until_associated = true
+}
+
+resource &quot;openstack_networking_port_v2&quot; &quot;nic2&quot; {
+  name = &quot;nhn-nic02&quot;
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  fixed_ip {
+    subnet_id = data.openstack_networking_subnet_v2.nhn-subnet.id
+  }
+  security_group_ids = [
+    data.openstack_networking_secgroup_v2.nhn-sg.id
+  ]
+}
+
+resource &quot;openstack_compute_instance_v2&quot; &quot;instance2&quot; {
+  name = &quot;jinyung0101-worker1&quot;
+  availability_zone = &quot;kr-pub-a&quot;
+  flavor_name = &quot;r2.c2m8&quot;
+  key_pair = &quot;jinyung0101&quot;
+
+  block_device {
+    uuid = data.openstack_images_image_v2.ubuntu_focal.id
+    source_type = &quot;image&quot;
+    destination_type = &quot;volume&quot;
+    delete_on_termination = true
+    volume_size = 50
+    volume_type = &quot;General HDD&quot;
+  }
+  network {
+    port = openstack_networking_port_v2.nic2.id
+  }
+}
+
+resource &quot;openstack_networking_port_v2&quot; &quot;nic3&quot; {
+  name = &quot;nhn-nic03&quot;
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  fixed_ip {
+    subnet_id = data.openstack_networking_subnet_v2.nhn-subnet.id
+  }
+  security_group_ids = [
+    data.openstack_networking_secgroup_v2.nhn-sg.id
+  ]
+}
+
+resource &quot;openstack_compute_instance_v2&quot; &quot;instance3&quot; {
+  name = &quot;jinyung0101-worker2&quot;
+  availability_zone = &quot;kr-pub-a&quot;
+  flavor_name = &quot;r2.c2m8&quot;
+  key_pair = &quot;jinyung0101&quot;
+
+  block_device {
+    uuid = data.openstack_images_image_v2.ubuntu_focal.id
+    source_type = &quot;image&quot;
+    destination_type = &quot;volume&quot;
+    delete_on_termination = true
+    volume_size = 50
+    volume_type = &quot;General HDD&quot;
+  }
+  network {
+    port = openstack_networking_port_v2.nic3.id
+  }
+}
+
+resource &quot;openstack_networking_port_v2&quot; &quot;nic4&quot; {
+  name = &quot;nhn-nic04&quot;
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  fixed_ip {
+    subnet_id = data.openstack_networking_subnet_v2.nhn-subnet.id
+  }
+  security_group_ids = [
+    data.openstack_networking_secgroup_v2.nhn-sg.id
+  ]
+}
+
+resource &quot;openstack_compute_instance_v2&quot; &quot;instance4&quot; {
+  name = &quot;jinyung0101-worker3&quot;
+  availability_zone = &quot;kr-pub-a&quot;
+  flavor_name = &quot;r2.c2m8&quot;
+  key_pair = &quot;jinyung0101&quot;
+
+  block_device {
+    uuid = data.openstack_images_image_v2.ubuntu_focal.id
+    source_type = &quot;image&quot;
+    destination_type = &quot;volume&quot;
+    delete_on_termination = true
+    volume_size = 50
+    volume_type = &quot;General HDD&quot;
+  }
+  network {
+    port = openstack_networking_port_v2.nic4.id
+  }
+}
+
+resource &quot;openstack_networking_port_v2&quot; &quot;nic5&quot; {
+  name = &quot;nhn-nic05&quot;
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  fixed_ip {
+    subnet_id = data.openstack_networking_subnet_v2.nhn-subnet.id
+  }
+  security_group_ids = [
+    data.openstack_networking_secgroup_v2.nhn-sg.id
+  ]
+}
+
+resource &quot;openstack_compute_instance_v2&quot; &quot;instance5&quot; {
+  name = &quot;jinyung0101-nfs&quot;
+  availability_zone = &quot;kr-pub-a&quot;
+  flavor_name = &quot;r2.c2m8&quot;
+  key_pair = &quot;jinyung0101&quot;
+
+  block_device {
+    uuid = data.openstack_images_image_v2.ubuntu_focal.id
+    source_type = &quot;image&quot;
+    destination_type = &quot;volume&quot;
+    delete_on_termination = true
+    volume_size = 50
+    volume_type = &quot;General HDD&quot;
+  }
+  network {
+    port = openstack_networking_port_v2.nic5.id
+  }
+}</code></pre>
+
+      <h3 id="lab-0709-3">03 · tf3 원본 — 변수화 최종본</h3>
+      <p>tf2와 완전히 동일한 인프라(5대 구성)를 <code>variables.tf</code>(변수 선언)와 <code>terraform.tfvars</code>(실제 값)로 분리해 재작성한 최종본입니다. <code>main.tf</code>의 모든 하드코딩 값이 <code>var.xxx</code> 참조로 바뀌었습니다.</p>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: tf2와 똑같은 5대 인프라를, 값을 전부 변수(<code>var.xxx</code>)로 바꿔서 다른 교육생·다른 환경에도 재사용 가능하게 만든 코드입니다.</p>
+      <pre><code>data &quot;openstack_networking_network_v2&quot; &quot;nhn-network&quot; {
+  name = var.vpc_name
+}
+data &quot;openstack_networking_subnet_v2&quot; &quot;nhn-subnet&quot; {
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  name = var.subnet_name
+}
+data &quot;openstack_networking_secgroup_v2&quot; &quot;nhn-sg&quot; {
+  name = var.security_groups_name
+}
+data &quot;openstack_images_image_v2&quot; &quot;ubuntu_focal&quot; {
+  name = var.os_ubuntu_name
+  most_recent = var.boolean_type_true
+}
+data &quot;openstack_networking_network_v2&quot; &quot;ext_network&quot; {
+  name = var.network_type_public
+}
+
+resource &quot;openstack_networking_port_v2&quot; &quot;nic&quot; {
+  name = var.nic_name[0]
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  fixed_ip {
+    subnet_id = data.openstack_networking_subnet_v2.nhn-subnet.id
+  }
+  security_group_ids = [
+    data.openstack_networking_secgroup_v2.nhn-sg.id
+  ]
+}
+
+resource &quot;openstack_compute_instance_v2&quot; &quot;instance1&quot; {
+  name = var.master_node
+  availability_zone = var.availability_zone
+  flavor_name = var.flavor_name
+  key_pair = var.key_pair
+
+  block_device {
+    uuid = data.openstack_images_image_v2.ubuntu_focal.id
+    source_type = var.source_type
+    destination_type = var.destination_type
+    delete_on_termination = var.boolean_type_true
+    volume_size = var.volume_size
+    volume_type = var.volume_type
+  }
+  network {
+    port = openstack_networking_port_v2.nic.id
+  }
+}
+
+resource &quot;openstack_networking_floatingip_v2&quot; &quot;fip_1&quot; {
+  pool= data.openstack_networking_network_v2.ext_network.name
+}
+resource &quot;openstack_compute_floatingip_associate_v2&quot; &quot;fip_1&quot; {
+  floating_ip = openstack_networking_floatingip_v2.fip_1.address
+  instance_id = openstack_compute_instance_v2.instance1.id
+  wait_until_associated = var.boolean_type_true
+}
+
+resource &quot;openstack_networking_port_v2&quot; &quot;nic2&quot; {
+  name = var.nic_name[1]
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  fixed_ip {
+    subnet_id = data.openstack_networking_subnet_v2.nhn-subnet.id
+  }
+  security_group_ids = [
+    data.openstack_networking_secgroup_v2.nhn-sg.id
+  ]
+}
+
+resource &quot;openstack_compute_instance_v2&quot; &quot;instance2&quot; {
+  name = var.worker_node[0]
+  availability_zone = var.availability_zone
+  flavor_name = var.flavor_name
+  key_pair = var.key_pair
+
+  block_device {
+    uuid = data.openstack_images_image_v2.ubuntu_focal.id
+    source_type = var.source_type
+    destination_type = var.destination_type
+    delete_on_termination = var.boolean_type_true
+    volume_size = var.volume_size
+    volume_type = var.volume_type
+  }
+  network {
+    port = openstack_networking_port_v2.nic2.id
+  }
+}
+
+resource &quot;openstack_networking_port_v2&quot; &quot;nic3&quot; {
+  name = var.nic_name[2]
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  fixed_ip {
+    subnet_id = data.openstack_networking_subnet_v2.nhn-subnet.id
+  }
+  security_group_ids = [
+    data.openstack_networking_secgroup_v2.nhn-sg.id
+  ]
+}
+
+resource &quot;openstack_compute_instance_v2&quot; &quot;instance3&quot; {
+  name = var.worker_node[1]
+  availability_zone = var.availability_zone
+  flavor_name = var.flavor_name
+  key_pair = var.key_pair
+
+  block_device {
+    uuid = data.openstack_images_image_v2.ubuntu_focal.id
+    source_type = var.source_type
+    destination_type = var.destination_type
+    delete_on_termination = var.boolean_type_true
+    volume_size = var.volume_size
+    volume_type = var.volume_type
+  }
+  network {
+    port = openstack_networking_port_v2.nic3.id
+  }
+}
+
+resource &quot;openstack_networking_port_v2&quot; &quot;nic4&quot; {
+  name = var.nic_name[3]
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  fixed_ip {
+    subnet_id = data.openstack_networking_subnet_v2.nhn-subnet.id
+  }
+  security_group_ids = [
+    data.openstack_networking_secgroup_v2.nhn-sg.id
+  ]
+}
+
+resource &quot;openstack_compute_instance_v2&quot; &quot;instance4&quot; {
+  name = var.worker_node[2]
+  availability_zone = var.availability_zone
+  flavor_name = var.flavor_name
+  key_pair = var.key_pair
+
+  block_device {
+    uuid = data.openstack_images_image_v2.ubuntu_focal.id
+    source_type = var.source_type
+    destination_type = var.destination_type
+    delete_on_termination = var.boolean_type_true
+    volume_size = var.volume_size
+    volume_type = var.volume_type
+  }
+  network {
+    port = openstack_networking_port_v2.nic4.id
+  }
+}
+
+resource &quot;openstack_networking_port_v2&quot; &quot;nic5&quot; {
+  name = var.nic_name[4]
+  network_id = data.openstack_networking_network_v2.nhn-network.id
+  fixed_ip {
+    subnet_id = data.openstack_networking_subnet_v2.nhn-subnet.id
+  }
+  security_group_ids = [
+    data.openstack_networking_secgroup_v2.nhn-sg.id
+  ]
+}
+
+resource &quot;openstack_compute_instance_v2&quot; &quot;instance5&quot; {
+  name = var.nfs_server
+  availability_zone = var.availability_zone
+  flavor_name = var.flavor_name
+  key_pair = var.key_pair
+
+  block_device {
+    uuid = data.openstack_images_image_v2.ubuntu_focal.id
+    source_type = var.source_type
+    destination_type = var.destination_type
+    delete_on_termination = var.boolean_type_true
+    volume_size = var.volume_size
+    volume_type = var.volume_type
+  }
+  network {
+    port = openstack_networking_port_v2.nic5.id
+  }
+}</code></pre>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: 위 <code>main.tf</code>에서 쓰는 변수 15개의 이름과 타입을 선언하는 파일입니다.</p>
+      <pre><code>variable &quot;vpc_name&quot; {
+  type = string
+}
+variable &quot;subnet_name&quot; {
+  type = string
+}
+variable &quot;security_groups_name&quot; {
+  type = string
+}
+variable &quot;os_ubuntu_name&quot; {
+  type = string
+}
+variable &quot;boolean_type_true&quot; {
+  type = bool
+}
+variable &quot;network_type_public&quot; {
+  type = string
+}
+variable &quot;master_node&quot; {
+  type = string
+}
+variable &quot;nic_name&quot; {
+  type = list(string)
+}
+variable &quot;worker_node&quot; {
+  type = list(string)
+}
+variable &quot;nfs_server&quot; {
+  type = string
+}
+variable &quot;availability_zone&quot; {
+  type = string
+}
+variable &quot;flavor_name&quot; {
+  type = string
+}
+variable &quot;key_pair&quot; {
+  type = string
+}
+variable &quot;source_type&quot; {
+  type = string
+}
+variable &quot;destination_type&quot; {
+  type = string
+}
+variable &quot;volume_size&quot; {
+  type = number
+}
+variable &quot;volume_type&quot; {
+  type = string
+}</code></pre>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">이 코드가 하는 일을 한 줄로 요약하면: 선언된 변수마다 이 교육생의 실제 값(서브넷 이름, 서버 이름, NIC 이름 등)을 채워 넣는 파일입니다.</p>
+      <pre><code>vpc_name = &quot;Default Network&quot;
+subnet_name = &quot;jinyung0101-subnet&quot;
+security_groups_name = &quot;jinyung0101&quot;
+os_ubuntu_name = &quot;Ubuntu Server 22.04.5 LTS (2026.03.10)&quot;
+boolean_type_true = true
+network_type_public = &quot;Public Network&quot;
+nic_name = [&quot;nhn-nic01&quot;, &quot;nhn-nic02&quot;, &quot;nhn-nic03&quot;, &quot;nhn-nic04&quot;, &quot;nhn-nic04&quot;]
+master_node = &quot;jinyung0101-master&quot;
+worker_node = [&quot;jinyung0101-worker1&quot;, &quot;jinyung0101-worker2&quot;, &quot;jinyung0101-worker3&quot;]
+nfs_server = &quot;jinyung0101-nfs&quot;
+availability_zone = &quot;kr-pub-a&quot;
+flavor_name = &quot;r2.c2m8&quot;
+key_pair = &quot;jinyung0101&quot;
+source_type = &quot;image&quot;
+destination_type = &quot;volume&quot;
+volume_size = 50
+volume_type = &quot;General HDD&quot;</code></pre>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>원본 파일의 오타</div>
+        <p>위 <code>terraform.tfvars</code>의 <code>nic_name</code> 목록은 원본 그대로입니다 — <code>&quot;nhn-nic04&quot;</code>가 두 번 들어가 있고 <code>&quot;nhn-nic05&quot;</code>가 빠져 있습니다(다섯 번째 NIC 이름이 실제로는 <code>nic4</code>와 중복). 실제 수업에서도 이런 실수가 그대로 나올 수 있다는 것을 보여주는 사례라 고치지 않고 원본 그대로 실었습니다.</p>
+      </div>
+
+      <h3 id="lab-0709-4">04 · 복습 문제 원본 (2026-07-10 수업)</h3>
+      <p>다음 날 수업에서 낸 복습 문제 원문입니다 — Rocky Linux 인스턴스 2대를 배포하는 과제입니다.</p>
+
+      <pre><code>테라폼을 활용하여 다음과 같이 배포하여라.
+
+이름: {아이디}-rocky{숫자}
+OS 이미지: Rocky Linux 8.10 (2026.03.10)
+가용성 영역: kr-pub-b
+인스턴스 개수: 2
+사양: 1core 2GB RAM
+볼륨 사이즈: 20GB
+볼륨 타입: General SSD
+
+(서브넷, 보안 그룹등 명시 되지 않은 것은 본인 리소스 활용)</code></pre>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>어떻게 접근하는가 (힌트)</div>
+        <p>위 tf1~tf3 패턴을 그대로 응용하면 됩니다 — <code>data "openstack_images_image_v2"</code>의 <code>name</code>만 <code>"Rocky Linux 8.10 (2026.03.10)"</code>으로, <code>flavor_name</code>을 1core/2GB RAM 사양에 맞는 타입으로, <code>volume_size</code>를 20, <code>volume_type</code>을 <code>"General SSD"</code>로 바꾼 뒤, tf2처럼 <code>nic</code>/<code>instance</code> 블록을 2벌(또는 tf3처럼 변수+리스트로) 작성하면 됩니다. 서브넷·보안그룹처럼 문제에 명시되지 않은 값은 본인이 이미 만들어 둔 리소스를 그대로 참조합니다. (이 자료에는 정답 코드가 들어있지 않습니다 — 원본 과제 문구만 그대로 옮겼습니다.)</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="glossary">
+      <div class="unit-kicker">REFERENCE</div>
+      <h2>중요 용어 사전</h2>
+      <dl class="glossary cols-2">
+        <div><dt>CIDR</dt><dd>IP 주소 범위 표기법 (예: 192.168.1.0/24)</dd></div>
+        <div><dt>Control Plane 노드</dt><dd>Kubernetes 클러스터의 마스터 노드</dd></div>
+        <div><dt>Worker 노드</dt><dd>워크로드를 실제 실행하는 노드</dd></div>
+        <div><dt>NFS 노드</dt><dd>클러스터 공유 파일 스토리지(NFS)를 제공하는 노드</dd></div>
+        <div><dt>Floating IP</dt><dd>사설 IP만 가진 인스턴스에 외부(인터넷) 접속을 가능하게 하는 공인 IP</dd></div>
+        <div><dt>Network Interface(NIC)</dt><dd>인스턴스가 네트워크에 연결되는 가상 통로(포트)</dd></div>
+        <div><dt>Key Pair</dt><dd>인스턴스 SSH 접속 인증에 쓰이는 공개키/개인키 쌍</dd></div>
+        <div><dt>Provider</dt><dd>Terraform이 특정 클라우드 API와 통신하기 위한 플러그인/인증정보</dd></div>
+        <div><dt>Data Source</dt><dd>기존 리소스를 조회하는 블록(<code>data "..." "..." {}</code>)</dd></div>
+        <div><dt>Resource</dt><dd>새로 생성·관리할 인프라 객체 정의 블록(<code>resource "..." "..." {}</code>)</dd></div>
+        <div><dt>Variable</dt><dd><code>variables.tf</code>의 입력 변수(string/number/bool/list/object)</dd></div>
+        <div><dt>tfvars</dt><dd>변수에 실제 값을 대입하는 파일(<code>terraform.tfvars</code>)</dd></div>
+      </dl>
+    </section>
+
+    <section class="unit" id="wrap">
+      <div class="unit-kicker">WRAP-UP</div>
+      <h2>정리 & 다음 강의 연결</h2>
+      <div class="summary">
+        <div class="box-head">한 줄 정리</div>
+        <p>이번 강의는 3강에서 개념으로 배운 IaaS 구성요소를 '콘솔 클릭'과 '코드 선언(Terraform)' 두 가지 방법으로 직접 만들어 본 시간이었습니다. 두 방법의 결과물은 동일합니다 — Control Plane 1대 + Worker 3대 + NFS 1대, 총 5대의 우분투 서버.</p>
+      </div>
+      <p>다음 강의(<strong>5강 · K8S 클러스터 설치</strong>)에서는 오늘 만든 이 5대의 서버 위에 Kubespray로 실제 쿠버네티스 클러스터를 설치합니다.</p>
+    </section>
+
+    <nav class="lecture-nav">
+      <a href="03_IaaS_이론.html"><span class="dir">이전</span>3강 · IaaS 이론</a>
+      <a class="next" href="05_K8S_클러스터_설치.html"><span class="dir">다음</span>5강 · K8S 클러스터 설치</a>
+    </nav>
+  </main>
+</div>
+<script src="assets/_shared/lecture.js"></script>
+</body>
+</html>

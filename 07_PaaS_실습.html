@@ -1,0 +1,1486 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>7강 · PaaS 실습 — 새싹 클라우드 네이티브 교안</title>
+<link rel="stylesheet" href="assets/_shared/lecture.css">
+</head>
+<body>
+<div class="layout">
+
+  <aside class="toc">
+    <a class="toc-back" href="00_index.html">← 전체 커리큘럼</a>
+    <div class="toc-kicker">7강 · 실습</div>
+    <div class="toc-title">PaaS 실습</div>
+    <nav>
+      <ul>
+        <li><a href="#part1">Ⅰ. MSA 게시판 — Kubernetes 직접 배포</a></li>
+        <li><a class="l2" href="#u1-1">01 · 실습 목표와 아키텍처</a></li>
+        <li><a class="l2" href="#u1-2">02 · 배포 준비 — 소스 & 포트 매핑</a></li>
+        <li><a class="l2" href="#u1-3">03 · Redis & MySQL 배포</a></li>
+        <li><a class="l2" href="#u1-4">04 · 로컬 빌드환경 구성</a></li>
+        <li><a class="l2" href="#u1-5">05 · 소스 설정 반영 & WAR 빌드</a></li>
+        <li><a class="l2" href="#u1-6">06 · Docker 이미지 빌드·태그·푸시</a></li>
+        <li><a class="l2" href="#u1-7">07 · Kubernetes 배포 & 접속 확인</a></li>
+        <li><a href="#part2">Ⅱ. Container Platform 포털로 배포</a></li>
+        <li><a class="l2" href="#u2-1">01 · 포털 YAML 배포 (nginx)</a></li>
+        <li><a class="l2" href="#u2-2">02 · Pipeline CI/CD 체험</a></li>
+        <li><a href="#part3">Ⅲ. MSA 샘플앱 전체 자동배포</a></li>
+        <li><a class="l2" href="#u3-1">01 · 실습 개요 & 아키텍처</a></li>
+        <li><a class="l2" href="#u3-2">02 · ConfigMap 환경변수 배포</a></li>
+        <li><a class="l2" href="#u3-3">03 · Source Control 레파지토리</a></li>
+        <li><a class="l2" href="#u3-4">04 · Pipeline 설정 & Kube Config</a></li>
+        <li><a class="l2" href="#u3-5">05 · 빌드+배포 작업 구성/실행</a></li>
+        <li><a class="l2" href="#u3-6">06 · 배포 확인 및 MSA 접속</a></li>
+        <li><a href="#part4">Ⅳ. Kubernetes CLI 실습</a></li>
+        <li><a class="l2" href="#u4-1">01 · Namespace / Pod / Service</a></li>
+        <li><a class="l2" href="#u4-2">02 · Deployment / 삭제</a></li>
+        <li><a href="#lab-0714">실전 실습 자료 · 트러블슈팅 (2026-07-14 수업)</a></li>
+        <li><a class="l2" href="#lab-0714-1">01 · 실습 원본 절차(학생 실행 기록)</a></li>
+        <li><a class="l2" href="#lab-0714-2">02 · 트러블슈팅① hibernate-validator</a></li>
+        <li><a class="l2" href="#lab-0714-3">03 · 트러블슈팅② MySQL PVC 미설정</a></li>
+        <li><a class="l2" href="#lab-0714-4">04 · 그 외 트러블슈팅 & 재시작 절차</a></li>
+        <li><a href="#glossary">용어 사전</a></li>
+        <li><a href="#wrap">정리 & 다음 강의</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main>
+    <button class="toc-toggle">☰ 목차 열기</button>
+
+    <header class="hero">
+      <span class="hero-badge">7강 · PaaS 실습</span>
+      <h1>PaaS 실습<br>— 같은 MSA 앱을, 4가지 방식으로 반복 배포하기</h1>
+      <p class="subtitle">1강에서 배운 <span class="term" title="여러 개의 작은 서비스로 쪼개어 만든 소프트웨어 구조(한 덩어리로 만드는 방식과 반대)">MSA</span>·<span class="term" title="애플리케이션과 실행에 필요한 것들을 하나로 포장해 어디서든 똑같이 실행되게 하는 단위">Container</span>·<span class="term" title="개발(Dev)과 운영(Ops)을 분리하지 않고 함께 자동화해 빠르게 배포하는 문화·방식">DevOps</span>·<span class="term" title="코드 변경 → 빌드 → 테스트 → 배포까지 자동으로 이어지게 하는 것(지속적 통합/지속적 배포)">CI/CD</span>가 실제로 어떻게 손에 잡히는지, 같은 목표(MSA 게시판·MSA 샘플 앱 배포)를 서로 다른 4가지 방식으로 반복 실습하며 확인합니다.</p>
+      <div class="meta">
+        <span>원본: 7.2026년 새싹(SeSAC) 클라우드 네이티브 교육 자료(PaaS 실습).pdf (196p)</span>
+        <span>구성: kubectl 직접 → 포털 GUI → 소스컨트롤+파이프라인 자동화 → kubectl 기본기</span>
+        <span>핵심 키워드: MSA · Kubernetes · CI/CD Pipeline · ConfigMap</span>
+      </div>
+    </header>
+
+    <div class="roadmap">
+      <h2>이 실습을 보는 순서 — 같은 목표, 4가지 방식</h2>
+      <ol>
+        <li><a href="#part1"><strong>직접 관리 (kubectl)</strong></a> — 인프라(Redis/MySQL), 빌드(WAR→Docker 이미지), 배포(yaml→kubectl apply)를 전부 손으로 수행</li>
+        <li><a href="#part2"><strong>포털 GUI</strong></a> — 같은 YAML을 K-PaaS Container Platform 포털 화면에 붙여넣어 배포, 파이프라인으로 빌드~배포 자동 연결 체험</li>
+        <li><a href="#part3"><strong>완전 자동화</strong></a> — 포털의 ConfigMap + 소스컨트롤 + 파이프라인을 엮어 4개 마이크로서비스를 사람이 kubectl을 한 줄도 안 치고 배포</li>
+        <li><a href="#part4"><strong>기본기 재확인</strong></a> — 위 세 방식이 결국 무엇을 대신해줬는지, kubectl 기본 명령어로 되짚기</li>
+      </ol>
+
+      <div class="table-wrap" id="compare-table" style="margin-top:22px;">
+        <table>
+          <thead><tr><th>구분</th><th>Part Ⅰ · kubectl 직접</th><th>Part Ⅱ · 포털 GUI</th><th>Part Ⅲ · 소스컨트롤+파이프라인</th></tr></thead>
+          <tbody>
+            <tr><td>리소스 배포</td><td><code>vim</code>으로 yaml 직접 수정 → <code>kubectl apply</code></td><td>포털 Workloads/Services 메뉴에 YAML 붙여넣기</td><td>파이프라인 Deploy 작업이 YAML을 자동 적용</td></tr>
+            <tr><td>이미지 생성</td><td>로컬 Eclipse+Maven으로 WAR 빌드 → Dockerfile → <code>docker build</code>/<code>push</code> 수작업</td><td>파이프라인 Build 작업이 Docker File을 자동 생성해 이미지 빌드(spring-music 예제, u2-2)</td><td>파이프라인이 Git 커밋을 받아 Docker File 자동 생성 후 빌드</td></tr>
+            <tr><td>자동화 정도</td><td>없음 — 매번 사람이 명령 실행</td><td>부분적 — 파이프라인 작업 체인은 있으나 소스 저장소는 별도 관리</td><td>높음 — 저장소 커밋 → 빌드 → 정적분석/테스트 → 배포까지 트리거로 연결</td></tr>
+            <tr><td>확인 방법</td><td><code>kubectl get/describe</code>로 직접 조회</td><td>포털에서 리소스 목록 화면 제공</td><td>포털 리소스 화면 + 파이프라인 실행 로그</td></tr>
+            <tr><td>대응하는 1강 개념</td><td>Container, kubectl 기초</td><td>PaaS(플랫폼이 관리 계층 대신 수행)</td><td>DevOps, CI/CD 파이프라인</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="part1">
+      <div class="unit-kicker">PART Ⅰ</div>
+      <h2>MSA 게시판 애플리케이션 배포 — Kubernetes로 직접 구성하기</h2>
+      <p class="unit-lede">회원가입·게시판·댓글 기능을 가진 게시판 애플리케이션을, UI/API Gateway/API 3종/DB 3종/세션 저장소로 쪼갠 MSA 구조로 직접 배포합니다. 인프라 준비부터 이미지 빌드, 최종 배포까지 전 과정을 손으로 진행합니다.</p>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>이번 7강 전체는 "같은 게시판 앱을 배포한다"는 하나의 목표를, 4가지 다른 방법으로 반복하는 실습입니다. 같은 목적지에 가는 방법에 비유하면, Part Ⅰ은 직접 운전(모든 걸 손으로 하는 kubectl), Part Ⅱ는 내비게이션이 달린 차(포털 화면 클릭), Part Ⅲ은 자율주행(설정만 해두면 알아서 달리는 파이프라인), Part Ⅳ는 다시 운전을 배우며 원리를 복습하는 것에 가깝습니다. 도착지(결과물)는 같아도 사람이 손을 얼마나 대는지가 다릅니다.</p>
+      </div>
+
+      <h3 id="u1-1">01 · 실습 목표와 아키텍처 이해</h3>
+      <p>이번 실습의 결과물은 회원가입, 로그인, 게시글 작성, 댓글 작성이 되는 게시판 애플리케이션입니다. 이 하나의 서비스가 내부적으로는 9개의 독립된 <span class="term" title="여러 대의 서버에 컨테이너를 자동으로 배치·관리해주는 오픈소스 플랫폼">쿠버네티스</span> 리소스로 쪼개져 있습니다 — 화면(UI), <span class="term" title="여러 개의 API로 가는 요청을 한 곳에서 받아 알맞은 곳으로 전달해주는 관문 역할">API Gateway</span>, 3개의 <span class="term" title="서로 다른 프로그램(서비스)이 데이터를 주고받기 위한 규칙과 창구">API</span>(사용자/게시글/댓글), 각 API 전용 <span class="term" title="데이터를 저장하고 관리하는 데이터베이스">DB</span> 3개, 그리고 세션 저장을 위한 <span class="term" title="데이터를 메모리에 저장해 아주 빠르게 읽고 쓰는 저장소, 여기선 로그인 세션 저장용">Redis</span>. 1강에서 배운 "느슨결합 분산(MSA)"과 "서비스별 독립 DB"가 실제 슬라이드에 그대로 등장합니다.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>구성요소</th><th>리소스 이름</th><th>역할(원본 문구)</th></tr></thead>
+          <tbody>
+            <tr><td>화면(UI)</td><td><code>edu-msa-ui</code></td><td>화면 서비스를 담당하는 API</td></tr>
+            <tr><td>API Gateway</td><td><code>edu-msa-zuul</code></td><td>API 서버 앞단에서 여러 API 서버들의 End-Point를 단일화하여 라우팅, 로드밸런싱 등의 역할을 하는 API</td></tr>
+            <tr><td>게시글 API</td><td><code>edu-msa-board</code></td><td>게시글 서비스를 담당하는 API</td></tr>
+            <tr><td>댓글 API</td><td><code>edu-msa-comment</code></td><td>댓글 서비스를 담당하는 API</td></tr>
+            <tr><td>사용자 API</td><td><code>edu-msa-user</code></td><td>사용자 정보에 대한 서비스를 담당하는 API</td></tr>
+            <tr><td>세션 저장소</td><td><code>redis-msa-ui</code></td><td>레디스를 이용해 세션값을 저장하는 역할</td></tr>
+            <tr><td>DB (게시글)</td><td><code>mysql-msa-board</code></td><td>게시글 API 전용 DB</td></tr>
+            <tr><td>DB (댓글)</td><td><code>mysql-msa-comment</code></td><td>댓글 API 전용 DB</td></tr>
+            <tr><td>DB (사용자)</td><td><code>mysql-msa-user</code></td><td>사용자 API 전용 DB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="color:var(--text-faint);font-size:0.9rem;">원본 부연 설명: "서비스별 별도의 데이터베이스를 분리하여 각 서비스의 데이터를 독립적으로 운영."</p>
+
+      <figure>
+        <img src="assets/07_PaaS_실습/images/p003_x50.jpeg" alt="실습으로 배포할 게시판 애플리케이션 실행 화면">
+        <figcaption>실습으로 배포할 게시판 애플리케이션 실행 화면 — 회원가입/로그인 후 게시글 목록을 확인할 수 있다.</figcaption>
+      </figure>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이렇게 잘게 쪼개서 배포하는가</div>
+        <p>모놀리식 구조라면 댓글 기능 하나만 고쳐도 애플리케이션 전체를 다시 빌드·배포해야 합니다. 서비스 단위로 쪼개면 댓글 기능을 고칠 때 <code>edu-msa-comment</code> 하나만 다시 빌드·배포하면 됩니다. DB를 서비스별로 3개 나눈 것도 같은 이유입니다 — 각 서비스가 자기 데이터를 독립적으로 소유해야 서비스 간 결합도가 낮아집니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디에 적용되는가</div>
+        <p>사용자 관점에서는 "로그인 → 글쓰기 → 댓글달기"라는 하나의 흐름이지만, 내부적으로는 사용자API·게시글API·댓글API가 <span class="term" title="웹 주소(URL)와 HTTP 방식으로 서비스끼리 데이터를 주고받는 대표적인 API 방식">REST API</span>로 통신하고 API Gateway(zuul)가 외부 요청의 단일 진입점 역할을 합니다. 1강에서 다룬 "주문하기" MSA 예시(사용자관리/상품관리/주문관리)와 동일한 패턴입니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>한 명의 요리사가 접수부터 조리, 서빙까지 모두 맡는 식당과, 접수·조리·서빙 담당이 각자 따로 일하는 식당을 비교해보면 이해가 쉽습니다. MSA는 후자입니다 — 조리 담당(게시글 API)이 바빠서 잠깐 멈춰도 접수(사용자 API)와 서빙(댓글 API)은 계속 돌아갑니다. 대신 담당자(서비스)끼리 정확히 소통해야 하니, 그 소통 창구 역할을 API Gateway가 맡습니다.</p>
+      </div>
+
+      <h3 id="u1-2">02 · 배포 준비 — 소스 다운로드 & 포트 매핑 규칙</h3>
+      <p>실습에 필요한 모든 쿠버네티스 배포 설정(<span class="term" title="설정 내용을 사람이 읽기 쉬운 줄글 형태로 적는 파일 형식. 쿠버네티스 배포 설정에 널리 쓰인다">yaml</span>) 파일은 GitHub 저장소 하나에 모여 있습니다. 이를 클론한 뒤, 9개 리소스가 쓸 <span class="term" title="클러스터 바깥에서도 정해진 포트 번호로 접속할 수 있게 열어주는 쿠버네티스 서비스 방식">NodePort</span> 번호를 미리 정해둔 표를 확인합니다.</p>
+
+      <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 실습에 쓸 배포 설정 파일들이 모여 있는 GitHub 저장소를 내 서버로 통째로 내려받는(clone) 명령입니다.</p>
+      <pre><code><span class="cmd-comment"># 저장소 클론</span>
+$ cd ~
+$ git clone https://github.com/K-PaaS/edu-msa-file.git</code></pre>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>애플리케이션</th><th>변수</th><th>포트번호</th></tr></thead>
+          <tbody>
+            <tr><td>edu-msa-ui</td><td><code>${EDU_MSA_UI}</code></td><td>30001</td></tr>
+            <tr><td>edu-msa-zuul</td><td><code>${EDU_MSA_ZUUL}</code></td><td>30101</td></tr>
+            <tr><td>edu-msa-board</td><td><code>${EDU_MSA_BOARD}</code></td><td>30201</td></tr>
+            <tr><td>edu-msa-comment</td><td><code>${EDU_MSA_COMMENT}</code></td><td>30301</td></tr>
+            <tr><td>edu-msa-user</td><td><code>${EDU_MSA_USER}</code></td><td>30401</td></tr>
+            <tr><td>mysql-msa-board</td><td><code>${MYSQL_MSA_BOARD}</code></td><td>30501</td></tr>
+            <tr><td>mysql-msa-comment</td><td><code>${MYSQL_MSA_COMMENT}</code></td><td>30601</td></tr>
+            <tr><td>mysql-msa-user</td><td><code>${MYSQL_MSA_USER}</code></td><td>30701</td></tr>
+            <tr><td>redis-msa-ui</td><td><code>${REDIS_MSA_UI}</code></td><td>30801</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="color:var(--text-faint);font-size:0.9rem;">활용 예시(원문): "MYSQL_MSA_BOARD의 포트번호가 필요한 경우 테이블을 참고하여 <code>${MYSQL_MSA_BOARD}</code> 변수에 해당하는 포트번호인 '30501'을 입력한다."</p>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 포트를 표로 미리 관리하는가</div>
+        <p>MSA는 리소스 수가 많아서(이번 실습만 9개) 포트가 겹치면 배포가 충돌합니다. 표로 고정해두면 이후 여러 yaml 파일을 수정할 때 값을 일관되게 넣을 수 있습니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디에 적용되는가</div>
+        <p>이 표의 변수들은 이후 모든 yaml 수정 단계(u1-3, u1-5, u1-7)에서 반복적으로 등장하므로, 이 단계에서 표를 한 번 정리해두면 뒤에서 헤매지 않습니다.</p>
+      </div>
+
+      <h3 id="u1-3">03 · 상태 저장소 배포 — Redis(세션) & MySQL(DB 3종)</h3>
+      <p>게시판 앱은 로그인 세션을 Redis에, 게시글·댓글·사용자 데이터를 <span class="term" title="가장 널리 쓰이는 오픈소스 관계형 데이터베이스 소프트웨어">MySQL</span> 3개 DB에 저장합니다. 1강의 <span class="term" title="클라우드에 맞는 애플리케이션을 만들 때 지키면 좋은 12가지 설계 원칙">12 Factor App</span> 원칙 중 "무상태(Stateless) 프로세스"에 따라, 애플리케이션 자신은 상태를 갖지 않고 상태는 전부 외부 저장소(Redis/MySQL)로 분리되어 있습니다.</p>
+
+      <ol class="steps">
+        <li>
+          <h4>Redis 배포</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 세션 저장소로 쓸 Redis의 접속 포트를 표에서 정한 값(30801)으로 고쳐서 배포하는 것입니다.</p>
+          <pre><code>$ vim ~/edu-msa-file/Kubernetes/redis-msa-ui.yaml
+<span class="cmd-comment"># ${REDIS_MSA_UI} 를 "30801"로 수정</span>
+
+$ cd ~/edu-msa-file/Kubernetes/
+$ kubectl apply -f redis-msa-ui.yaml</code></pre>
+        </li>
+        <li>
+          <h4>MySQL 배포 (board/comment/user)</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 게시글·댓글·사용자용 DB 3개의 접속 포트를 각각 고쳐서 한 번에 배포하는 것입니다.</p>
+          <pre><code><span class="cmd-comment"># ${MYSQL_MSA_BOARD} → 30501, ${MYSQL_MSA_COMMENT} → 30601, ${MYSQL_MSA_USER} → 30701</span>
+$ vim ~/edu-msa-file/Kubernetes/mysql-msa-board.yaml
+$ vim ~/edu-msa-file/Kubernetes/mysql-msa-comment.yaml
+$ vim ~/edu-msa-file/Kubernetes/mysql-msa-user.yaml
+
+$ cd ~/edu-msa-file/Kubernetes/
+$ kubectl apply -f mysql-msa-board.yaml -f mysql-msa-comment.yaml -f mysql-msa-user.yaml</code></pre>
+          <figure>
+            <img src="assets/07_PaaS_실습/images/p017_x265.png" alt="mysql-msa-board/-comment/-user yaml NodePort 변수 치환 화면">
+            <figcaption>mysql-msa-board / -comment / -user 3개 서비스 yaml에서 NodePort 변수를 포트번호 테이블 값(30501/30601/30701)으로 각각 치환한다.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <h4>DB 접속 & 테이블 생성 (board 예시, comment/user도 동일 패턴)</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 방금 띄운 MySQL 컨테이너 안에 직접 접속해서, 게시판 데이터를 저장할 데이터베이스와 표(테이블)를 만드는 것입니다.</p>
+          <pre><code>$ kubectl get pods
+$ kubectl exec -it ${POD_NAME} -- /bin/bash
+<span class="cmd-comment"># 예시: kubectl exec -it mysql-msa-board-7d86858bcb-bkg5j -- /bin/bash</span>
+
+# mysql -u root -p
+Enter password: password
+
+CREATE DATABASE msa_board default CHARACTER SET UTF8;
+CREATE TABLE `TB_BOARD` (
+  `board_seq` int(11) NOT NULL AUTO_INCREMENT,
+  `board_title` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
+  `board_text` mediumtext COLLATE utf8_unicode_ci,
+  `write_user_id` varchar(20) COLLATE utf8_unicode_ci NOT NULL,
+  `write_user_name` varchar(20) COLLATE utf8_unicode_ci NOT NULL,
+  `use_yn` varchar(1) COLLATE utf8_unicode_ci DEFAULT 'Y',
+  `create_dt` datetime NOT NULL,
+  `update_dt` datetime NOT NULL,
+  PRIMARY KEY (`board_seq`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+USE msa_board;
+
+> exit
+# exit</code></pre>
+          <p style="color:var(--text-faint);font-size:0.9rem;">comment/user DB도 DB명·테이블명만 바꿔 동일한 패턴으로 생성합니다: <code>CREATE DATABASE msa_comment</code> + <code>TB_COMMENT</code>(comment_seq, board_seq, comment 등), <code>CREATE DATABASE msa_user</code> + <code>TB_USER</code>(user_seq, user_id, user_passwd 등, <code>UNIQUE KEY id_key(user_id)</code>).</p>
+        </li>
+      </ol>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 DB를 서비스별로 3개 분리하는가</div>
+        <p>u1-1에서 설명한 MSA의 "서비스별 독립 데이터 소유" 원칙의 실제 구현입니다. 게시글 DB에 장애가 나도 사용자 DB·댓글 DB는 영향받지 않습니다.</p>
+      </div>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>어떻게 컨테이너 안에서 DB를 초기화하는가</div>
+        <p><code>kubectl exec</code>로 실행 중인 MySQL <span class="term" title="쿠버네티스에서 컨테이너를 실제로 실행하는 가장 작은 단위">파드</span> 내부 셸에 접속 → <code>mysql</code> 클라이언트로 로그인 → <code>CREATE DATABASE</code>/<code>CREATE TABLE</code> <span class="term" title="데이터베이스에 테이블을 만들거나 구조를 바꿀 때 쓰는 SQL 명령어 종류(Data Definition Language)">DDL</span>을 실행합니다. 이 과정은 애플리케이션 코드가 자동으로 하는 게 아니라 사람이 배포 직후 1회성으로 실행하는 초기화 작업입니다(1강 12 Factor App의 "관리 프로세스는 일회성 프로세스로 실행" 원칙에 해당).</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>"애플리케이션은 무상태(기억을 못하는 직원)이고, 상태(기억)는 Redis·MySQL이라는 별도의 캐비닛에 보관한다"는 뜻입니다. 직원(API 서버)이 잠깐 자리를 비우거나 새 직원으로 교체되어도, 캐비닛(DB)에 적힌 내용은 그대로 남아있기 때문에 손님(사용자)은 불편을 느끼지 않습니다.</p>
+      </div>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>주의</div>
+        <p>MySQL 로그인 비밀번호는 실습 환경 기본값(<code>password</code>)이며, 실제 운영 환경에서는 반드시 변경해야 합니다.</p>
+      </div>
+
+      <h3 id="u1-4">04 · 로컬 빌드환경 구성 — JDK 8 & eGovFrameDev</h3>
+      <p>WAR 파일을 빌드하려면 Windows PC에 <span class="term" title="자바 프로그램을 만들고 실행하는 데 필요한 개발 도구 모음">JDK 8</span>과 전자정부표준프레임워크 개발환경(<span class="term" title="한국 공공기관 SW 개발에 쓰이는 전자정부표준프레임워크 전용 개발 도구(Eclipse 기반)">eGovFrameDev</span>, Eclipse 기반 배포판)이 필요합니다.</p>
+
+      <pre><code><span class="cmd-comment"># 환경 변수 등록</span>
+제어판 → 시스템 → 고급 시스템 설정 → 환경 변수 → 새로 만들기(시스템 변수)
+  변수 이름: JAVA_HOME   변수 값: C:\Program Files\Java\ (하위 폴더에 jdk1.8)
+  변수 이름: CLASSPATH   변수 값: %JAVA_HOME%\lib
+  Path 편집 → 새로 만들기 → %JAVA_HOME%\bin 추가
+
+$ java -version
+$ javac -version
+<span class="cmd-comment"># CMD 창에서 JDK가 정상 설치되었는지 확인</span>
+
+<span class="cmd-comment"># eGovFrameDev-3.9.0-64bit.exe 다운로드 → 압축 해제 → eclipse.exe 실행</span></code></pre>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 JDK 8을 별도로 맞추는가</div>
+        <p>원본에 "war 파일 생성 시 반드시 jdk 8버전으로 빌드를 실행해야 한다"고 명시되어 있습니다. 전자정부프레임워크 3.9.0 기반 프로젝트의 호환성 요구사항이기 때문입니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디에 적용되는가</div>
+        <p>eGovFrameDev는 전자정부표준프레임워크 기반 Eclipse 배포판으로, 한국 공공기관 SW 개발에서 널리 쓰이는 개발 도구입니다.</p>
+      </div>
+
+      <h3 id="u1-5">05 · 소스 설정 반영 & WAR 빌드</h3>
+      <p>GitHub에서 받은 5개 API 소스(edu-msa-ui / zuul / user / comment / board)를 Eclipse 프로젝트로 불러온 뒤, 각 프로젝트의 <code>api.properties</code> 파일에 실제 접속 정보(<span class="term" title="쿠버네티스 클러스터 안에서 리소스를 그룹으로 나눠 관리하는 논리적 구역">네임스페이스</span>, <span class="term" title="내 컴퓨터 한 대에서 쿠버네티스를 가볍게 실습해볼 수 있게 해주는 도구">Minikube</span> IP, 포트)를 채워 넣고 <span class="term" title="자바 프로젝트를 컴파일하고 필요한 라이브러리를 관리해 빌드해주는 도구">Maven</span>으로 <span class="term" title="자바 웹 애플리케이션을 서버에 배포할 수 있도록 하나로 묶은 압축 파일">WAR</span> 파일을 만듭니다.</p>
+
+      <ol class="steps">
+        <li>
+          <h4>소스 다운로드</h4>
+          <p>GitHub URL: <code>https://github.com/K-PaaS?q=edu&type=all</code> 에서 'edu-msa'로 검색하여 5개 저장소(edu-msa-ui, edu-msa-zuul, edu-msa-user, edu-msa-comment, edu-msa-board)를 다운로드합니다(Clone 또는 Download Zip, 압축파일은 해제).</p>
+          <figure>
+            <img src="assets/07_PaaS_실습/images/p039_x348.png" alt="K-PaaS GitHub 조직에서 edu-msa 소스 5개 저장소 다운로드 화면">
+            <figcaption>K-PaaS GitHub 조직에서 API 소스(edu-msa-ui 등 5개 저장소)를 다운로드하는 화면.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <h4>Eclipse 프로젝트 추가</h4>
+          <pre><code>File → Open Projects from File System → Directory → 소스파일 선택 → Finish</code></pre>
+        </li>
+        <li>
+          <h4>(board/comment/user) 설정파일 수정</h4>
+          <p>경로: 프로젝트/src/main/resources/properties/api.properties</p>
+          <pre><code>① ${NAMESPACE} → "default"
+② ${KUBERNETES_URL} → Minikube IP 주소
+③ ${MYSQL_MSA_BOARD}=30501, ${MYSQL_MSA_COMMENT}=30601, ${MYSQL_MSA_USER}=30701</code></pre>
+        </li>
+        <li>
+          <h4>(ui) 설정파일 수정</h4>
+          <pre><code>① ${NAMESPACE} → "default"
+② ${KUBERNETES_URL} → Minikube IP 주소
+③ ${REDIS_MSA_UI} → 30801</code></pre>
+        </li>
+        <li>
+          <h4>(zuul) 설정파일 수정 없음</h4>
+          <p>K8S 배포 시 yaml 파일에서 변수 적용하므로 수정 없이 바로 war 파일을 생성합니다.</p>
+        </li>
+        <li>
+          <h4>Maven build JDK 등록</h4>
+          <pre><code>Window → Preferences → Java → Installed JREs → 기존 목록 선택 → Remove → Add
+  → Standard VM → Next → Directory → jdk-1.8 폴더 선택 → Finish
+  → 목록에서 jdk 선택 → Apply and Close</code></pre>
+        </li>
+        <li>
+          <h4>WAR 빌드 (5개 프로젝트 각각)</h4>
+          <pre><code>프로젝트 우클릭 → Run As → Maven build...
+  Goals: clean install → Run
+<span class="cmd-comment"># 빌드 완료 시 각 프로젝트의 target/ 폴더에 war 파일 생성</span></code></pre>
+        </li>
+        <li>
+          <h4>war 파일 서버 이동</h4>
+          <p>MobaXterm sftp로 드래그: 로컬 <code>target/*.war</code> → 서버 <code>/edu-msa-file/Docker/edu-msa-*/</code> 각 폴더.</p>
+        </li>
+      </ol>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 소스를 수정한 뒤에야 빌드하는가</div>
+        <p><code>api.properties</code>에 들어가는 접속 정보(DB 포트, Redis 포트, K8s 네임스페이스)가 실제 배포 환경 값과 일치해야 서비스 간 통신이 정상 동작합니다. Zuul(API Gateway)만 예외로 소스 수정이 없는 이유는, 라우팅 대상 정보를 코드가 아니라 배포 시점의 yaml(환경변수)로 주입하기 때문입니다 — 이는 1강 12 Factor App의 "설정(Config)은 코드가 아니라 환경에 저장한다" 원칙이 실제로 나뉘어 적용된 사례입니다.</p>
+      </div>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>어떻게 WAR가 실행 이미지가 되는가</div>
+        <p>WAR는 아직 "<span class="term" title="애플리케이션 실행에 필요한 모든 것을 담아, 어디서든 똑같이 실행할 수 있게 만든 실행 파일 묶음">컨테이너 이미지</span>"가 아니라 자바 웹 애플리케이션 패키지일 뿐입니다. 다음 단계(u1-6)에서 <span class="term" title="컨테이너 이미지를 어떻게 만들지 순서대로 적어둔 설명서 파일">Dockerfile</span>이 이 WAR를 Tomcat 베이스 이미지 위에 얹어야 비로소 실행 가능한 컨테이너 이미지가 됩니다.</p>
+      </div>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>주의</div>
+        <p>war 파일은 반드시 JDK 8로 빌드해야 하며, 다른 버전으로 빌드하면 배포 후 정상 동작하지 않을 수 있습니다. 이미지 생성 전에는 Dockerfile 위치에 war 파일과 <code>server.xml</code>(board/comment/ui/user) 또는 <code>application.yml</code>(zuul)이 같은 폴더에 있는지 반드시 확인해야 합니다.</p>
+      </div>
+
+      <h3 id="u1-6">06 · Docker 이미지 빌드·태그·푸시 (Docker Hub)</h3>
+      <p>WAR 파일과 설정파일(server.xml/application.yml)이 Dockerfile과 같은 폴더에 준비된 상태에서, <code>docker build</code>로 이미지를 만들고 <span class="term" title="누구나 만든 컨테이너 이미지를 올리고 받아올 수 있는 온라인 이미지 저장소(레지스트리)">Docker Hub</span> 저장소에 업로드합니다. Docker Hub는 원문 정의상 "도커에서 운영하는 도커 이미지 저장소 서비스"입니다.</p>
+
+      <ol class="steps">
+        <li>
+          <h4>Docker Hub 계정 생성 및 저장소 생성</h4>
+          <p><code>https://hub.docker.com/</code>에서 계정을 만들고, edu-msa-board / edu-msa-comment / edu-msa-ui / edu-msa-user / edu-msa-zuul 5개 이미지 저장소(Repository)를 각각 생성합니다.</p>
+        </li>
+        <li>
+          <h4>저장소 로그인</h4>
+          <pre><code>$ docker login docker.io</code></pre>
+        </li>
+        <li>
+          <h4>이미지 빌드 · 태그 · 업로드 (5개 서비스 반복)</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 5개 서비스 각각을 컨테이너 이미지로 포장(build)하고, 내 Docker Hub 계정 이름표를 붙여(tag) 창고에 업로드(push)하는 것입니다.</p>
+          <pre><code>$ cd ~/edu-msa-file/Docker/edu-msa-board/
+$ docker build --tag edu-msa-board:latest .
+$ docker tag edu-msa-board ${도커허브ID}/edu-msa-board
+$ docker push ${도커허브ID}/edu-msa-board
+
+$ cd ~/edu-msa-file/Docker/edu-msa-comment/
+$ docker build --tag edu-msa-comment:latest .
+$ docker tag edu-msa-comment ${도커허브ID}/edu-msa-comment
+$ docker push ${도커허브ID}/edu-msa-comment
+
+$ cd ~/edu-msa-file/Docker/edu-msa-ui/
+$ docker build --tag edu-msa-ui:latest .
+$ docker tag edu-msa-ui ${도커허브ID}/edu-msa-ui
+$ docker push ${도커허브ID}/edu-msa-ui
+
+$ cd ~/edu-msa-file/Docker/edu-msa-user/
+$ docker build --tag edu-msa-user:latest .
+$ docker tag edu-msa-user ${도커허브ID}/edu-msa-user
+$ docker push ${도커허브ID}/edu-msa-user
+
+$ cd ~/edu-msa-file/Docker/edu-msa-zuul/
+$ docker build --tag edu-msa-zuul:latest .
+$ docker tag edu-msa-zuul ${도커허브ID}/edu-msa-zuul
+$ docker push ${도커허브ID}/edu-msa-zuul</code></pre>
+          <figure>
+            <img src="assets/07_PaaS_실습/images/p061_x429.png" alt="edu-msa-board 이미지 빌드 로그">
+            <figcaption>edu-msa-board 이미지 빌드 로그 — Tomcat 베이스 이미지(tomcat:9-jre8-alpine) 위에 server.xml과 WAR 파일을 올려 이미지를 완성한다.</figcaption>
+          </figure>
+        </li>
+      </ol>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 로컬 이미지를 다시 태그해서 Hub에 올리는가</div>
+        <p>Kubernetes <span class="term" title="여러 대의 서버를 하나처럼 묶어 관리하는 서버 묶음">클러스터</span>의 노드가 이미지를 pull 받으려면 접근 가능한 공용 <span class="term" title="컨테이너 이미지를 저장해두고 받아갈 수 있게 하는 창고 같은 서비스">레지스트리</span>(Docker Hub)에 이미지가 있어야 합니다. 로컬에서만 build한 이미지는 그 컴퓨터에만 존재하므로, 계정 네임스페이스를 붙여 태그(tag)한 뒤 push하는 과정이 필요합니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>이미지를 빌드하는 것은 물건을 상자에 포장하는 것이고, Docker Hub는 택배 보관 창고입니다. 내 컴퓨터에서만 포장한 상자는 그 컴퓨터에만 있으므로, 창고(Docker Hub)에 갖다 놓아야(push) 다른 곳(Kubernetes 클러스터의 서버들)에서도 그 창고 주소로 상자를 받아갈(pull) 수 있습니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디에 적용되는가</div>
+        <p>이 build → tag → push 패턴은 5개 서비스(board, comment, ui, user, zuul) 모두에 동일하게 반복됩니다.</p>
+      </div>
+
+      <h3 id="u1-7">07 · Kubernetes 배포 & 접속 확인</h3>
+      <p>완성된 이미지를 실제로 클러스터에 올리기 위해 각 서비스의 배포 yaml에서 <code>image</code> 경로와 NodePort 값을 최종 수정한 뒤 <code>kubectl apply</code>로 한 번에 배포하고, 웹 브라우저로 접속해 회원가입/게시판/댓글 기능이 실제로 동작하는지 확인합니다.</p>
+
+      <ol class="steps">
+        <li>
+          <h4>yaml 최종 수정 (board/comment/ui/user)</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 각 서비스의 배포 설정에 방금 업로드한 이미지 주소와 포트 번호를 채워 넣어, 실제 배포에 쓸 수 있게 최종 수정하는 것입니다.</p>
+          <pre><code><span class="cmd-comment"># image: "${도커허브ID}/edu-msa-board:latest", ${EDU_MSA_BOARD} → "30201"</span>
+<span class="cmd-comment"># image: "${도커허브ID}/edu-msa-comment:latest", ${EDU_MSA_COMMENT} → "30301"</span>
+<span class="cmd-comment"># image: "${도커허브ID}/edu-msa-ui:latest", ${EDU_MSA_UI} → "30001"</span>
+<span class="cmd-comment"># image: "${도커허브ID}/edu-msa-user:latest", ${EDU_MSA_USER} → "30401"</span>
+$ vim ~/edu-msa-file/Kubernetes/edu-msa-board.yaml
+$ vim ~/edu-msa-file/Kubernetes/edu-msa-comment.yaml
+$ vim ~/edu-msa-file/Kubernetes/edu-msa-ui.yaml
+$ vim ~/edu-msa-file/Kubernetes/edu-msa-user.yaml
+
+<span class="cmd-comment"># yaml 수정 (zuul) — image, ${NAMESPACE} → "default", ${EDU_MSA_ZUUL} → "30101"</span>
+$ vim ~/edu-msa-file/Kubernetes/edu-msa-zuul.yaml</code></pre>
+        </li>
+        <li>
+          <h4>전체 배포</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 앞서 수정한 5개 서비스의 yaml 파일을 한 번에 클러스터에 적용해, 게시판 앱 전체를 실제로 띄우는 것입니다.</p>
+          <pre><code>$ cd ~/edu-msa-file/Kubernetes/
+$ kubectl apply -f edu-msa-board.yaml -f edu-msa-comment.yaml -f edu-msa-ui.yaml -f edu-msa-user.yaml -f edu-msa-zuul.yaml</code></pre>
+        </li>
+        <li>
+          <h4>배포 확인</h4>
+          <pre><code>$ kubectl get pods
+$ kubectl get service</code></pre>
+        </li>
+        <li>
+          <h4>접속 확인</h4>
+          <p>Master Node IP : edu-msa-ui NodePort</p>
+          <pre><code>예시: xx.xx.xx.xx:30001/user/login</code></pre>
+        </li>
+      </ol>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 마지막에 한꺼번에 5개 yaml을 apply하는가</div>
+        <p>지금까지(Redis, MySQL, WAR 빌드, Docker 이미지)는 모두 이 마지막 배포를 위한 준비 단계였습니다. API들이 서로 의존하기 때문에(zuul→board/comment/user, ui→zuul/redis), 상태 저장소(Redis/MySQL)가 먼저 떠 있어야 API들이 정상 기동합니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디에 적용되는가</div>
+        <p>이 접속 확인이 바로 u1-1에서 소개한 "실습 결과물"(회원가입, 게시판, 댓글)이 실제로 완성되는 지점입니다.</p>
+      </div>
+
+      <div class="summary">
+        <div class="box-head">Part Ⅰ 정리</div>
+        <p>직접 kubectl로 인프라를 다루는 방식은 통제력은 높지만, 사람이 매번 yaml 수정 → apply를 반복해야 하고 이미지 빌드도 전부 수작업입니다. 이 반복 작업을 GUI화·자동화한 것이 <a href="#part2">Part Ⅱ</a>·<a href="#part3">Ⅲ</a>의 K-PaaS Container Platform입니다.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="part2">
+      <div class="unit-kicker">PART Ⅱ</div>
+      <h2>Container Platform(K-PaaS) 포털로 배포하기</h2>
+      <p class="unit-lede">이번엔 같은 개념(Deployment/Service YAML, 빌드~배포 파이프라인)을 터미널이 아니라 K-PaaS Container Platform의 웹 포털에서 다뤄봅니다.</p>
+
+      <h3 id="u2-1">01 · 포털에서 YAML로 직접 리소스 배포 (nginx 샘플)</h3>
+      <p>K-PaaS Container Platform 포털의 <code>Workloads &gt; Deployments</code>, <code>Services &gt; Services</code> 메뉴에서 "생성" 버튼을 눌러 YAML을 붙여넣는 것만으로 리소스를 배포할 수 있습니다. 실습은 nginx 샘플로 진행합니다.</p>
+
+      <ol class="steps">
+        <li>
+          <h4>Deployment YAML 작성 (참고: kubernetes.io 공식 문서)</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: nginx 컨테이너를 3개(replicas: 3) 띄워서 계속 유지하라고 쿠버네티스에 선언하는 배포 설정입니다.</p>
+          <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ssu-nginx
+  namespace: default
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80</code></pre>
+        </li>
+        <li>
+          <h4>포털에 Deployment YAML 등록</h4>
+          <p>포털: Workloads &gt; Deployments 메뉴의 생성 버튼 클릭 &gt; YAML 입력 &gt; 저장.</p>
+          <figure>
+            <img src="assets/07_PaaS_실습/images/p074_x490.png" alt="K-PaaS Container Platform 포털의 Deployment 생성 화면">
+            <figcaption>K-PaaS Container Platform 포털의 Deployment 생성 화면 — YAML을 그대로 붙여넣고 저장하면 배포된다.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <h4>Service YAML 작성 (NodePort 타입)</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 앞서 만든 nginx 파드들에 접속할 수 있도록 NodePort(30110)라는 고정 창구를 열어주는 설정입니다.</p>
+          <pre><code>apiVersion: v1
+kind: Service
+metadata:
+  name: ssu-nginx
+  namespace: default
+spec:
+  type: NodePort
+  selector:
+    app: nginx
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30110</code></pre>
+        </li>
+        <li>
+          <h4>포털에 Service YAML 등록</h4>
+          <p>포털: Services &gt; Services 메뉴의 생성 버튼 클릭 &gt; YAML 입력 &gt; 저장.</p>
+        </li>
+        <li>
+          <h4>배포 확인</h4>
+          <p>Container Platform Portal에서 리소스를 조회합니다.</p>
+        </li>
+        <li>
+          <h4>접속 확인</h4>
+          <pre><code>{K8S_MASTER_NODE_IP}:{NodePort}</code></pre>
+          <figure>
+            <img src="assets/07_PaaS_실습/images/p078_x521.png" alt="NodePort 접속 시 뜨는 nginx 기본 페이지">
+            <figcaption>NodePort로 접속하면 뜨는 nginx 기본 페이지 — 배포 성공을 확인할 수 있다.</figcaption>
+          </figure>
+        </li>
+      </ol>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 kubectl 대신 포털에 YAML을 붙여넣는가</div>
+        <p>YAML 문법 자체는 동일합니다 — 배우는 개념(<span class="term" title="지정한 개수만큼 파드를 계속 유지해주는 쿠버네티스 오브젝트(파드가 죽으면 자동으로 다시 만든다)">Deployment</span>, <span class="term" title="여러 파드에 접속할 수 있는 고정된 창구(주소)를 만들어주는 쿠버네티스 오브젝트">Service</span>, NodePort)은 Part Ⅰ과 같습니다. 달라지는 것은 "터미널 명령어" 대신 "웹 GUI"로 리소스를 관리할 수 있다는 점입니다. 이것이 <span class="term" title="서버·OS 관리는 플랫폼이 대신 해주고 사용자는 애플리케이션 개발·배포에만 집중하게 해주는 클라우드 서비스 형태(Platform as a Service)">PaaS</span> 포털이 제공하는 가장 기본적인 가치 — 콘솔/kubectl 접근 권한이 없는 팀원도 웹 화면만으로 리소스를 다룰 수 있게 하는 것입니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>1강에서 다룬 자가용(On-Premise)·렌트카(IaaS)·택시(PaaS) 비유를 다시 떠올려보면, PaaS는 "차(인프라·실행 플랫폼)는 플랫폼이 운전해주고 나는 목적지(코드·배포 내용)만 지정하면 되는" 택시에 해당합니다. 여기서는 그 택시를 부르고 목적지를 지정하는 창구가 바로 이 웹 포털 화면입니다 — kubectl이라는 표준 조작법 대신, 버튼과 화면으로 같은 조작을 할 수 있게 해줍니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디에 적용되는가</div>
+        <p>이 방식은 Part Ⅰ에서 매번 <code>vim</code> + <code>kubectl apply</code>로 하던 작업을 그대로 대체할 수 있습니다.</p>
+      </div>
+
+      <h3 id="u2-2">02 · Pipeline 서비스로 CI/CD 체험 — spring-music 배포</h3>
+      <p>이번엔 컨테이너 이미지를 사람이 직접 만들지 않고, 파이프라인이 Git 저장소의 소스를 받아 빌드 → <span class="term" title="코드를 실행하지 않고 코드 자체를 검사해 잠재적인 버그·스타일 문제를 찾아내는 방법">정적분석</span> → 테스트 → 배포까지 자동으로 연결해 실행하는 것을 체험합니다. 예제 앱은 오픈소스 spring-music(<code>https://github.com/cloudfoundry-samples/spring-music.git</code>, 브랜치 <code>spring-boot-2</code>)입니다.</p>
+
+      <ol class="steps">
+        <li>
+          <h4>파이프라인 목록 선택 &gt; 새 작업 추가</h4>
+        </li>
+        <li>
+          <h4>Build 작업 구성</h4>
+          <pre><code>내 작업 제목 입력 → 작업유형 'Build' → 빌드유형 'Gradle'
+→ 빌드 컨테이너 유형 'Kubernetes' → 컨테이너 이미지 저장소 이름 입력
+→ Docker File 생성하기 클릭</code></pre>
+        </li>
+        <li>
+          <h4>형상관리정보 입력</h4>
+          <pre><code>Github 선택, 레파지토리 주소 입력(spring-music git 주소)
+→ 브랜치 조회 클릭('spring-boot-2' 선택)
+→ 작업 트리거 'Trigger when previous job is complete' 선택 → 저장</code></pre>
+        </li>
+        <li>
+          <h4>품질게이트(Static Analysis) 작업 추가</h4>
+          <pre><code>작업유형 'Static-Analysis' 선택 → 입력유형(Sonarway, spring-music, 빌드 선택)
+→ 작업 트리거 'Trigger when previous job is complete' 선택 → 저장</code></pre>
+        </li>
+        <li>
+          <h4>테스트(JUnit-Test) 작업 추가</h4>
+          <pre><code>작업유형 'JUnit-Test' 선택 → 입력유형(빌드 선택)
+→ 작업 트리거 'Trigger when previous job is complete' 선택 → 저장</code></pre>
+        </li>
+        <li>
+          <h4>배포(Deploy) 작업 추가</h4>
+          <pre><code>내 작업 제목 입력 → 작업유형 'Deploy' → 유형 'Deployment'
+→ 입력유형 '빌드작업 선택' → 앱 이름 입력 → 앱 유형 'BackEnd'
+→ Kubernetes 정보 '등록한 kube config 선택'
+→ DEPLOYMENT.YML 수정 (%NAMESPACE%: 네임스페이스명, %INSTANCE%: 개수, %INTERNAL_SERVICE_PORT%: 8080)
+→ DEPLOYMENT_SERVICE.YML 수정 → 작업 트리거 선택 → 저장</code></pre>
+        </li>
+        <li>
+          <h4>배포 확인</h4>
+          <p>Container Platform Portal에서 Deployment / Service 리소스를 조회합니다.</p>
+        </li>
+        <li>
+          <h4>접속</h4>
+          <pre><code>{K8S_MASTER_NODE_IP}:{NODE_PORT}</code></pre>
+          <figure>
+            <img src="assets/07_PaaS_실습/images/p096_x586.png" alt="파이프라인이 빌드~배포까지 자동 처리한 결과, Spring Music 앱 접속 화면">
+            <figcaption>파이프라인이 빌드~배포까지 자동 처리한 결과 — Spring Music 샘플 앱이 정상 접속된 화면(앨범 목록).</figcaption>
+          </figure>
+        </li>
+      </ol>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 Build→정적분석→테스트→배포를 하나의 파이프라인으로 묶는가</div>
+        <p>1강에서 배운 CI(지속적 통합)/CD(지속적 배포)의 정의 그대로입니다. 코드 변경이 생기면 빌드 → 테스트 → 배포까지 자동으로 이어지게 만들어, 사람이 각 단계를 수동으로 실행하며 생기는 실수와 지연을 없앱니다. "작업 트리거: Trigger when previous job is complete" 설정이 바로 이 자동 연결 고리입니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디에 적용되는가</div>
+        <p>실무에서는 정적분석(Sonarway 등 SonarQube 계열) 단계가 "코드 품질 게이트" 역할을 해서, 품질 기준 미달 시 다음 단계(테스트/배포)로 진행되지 않도록 막는 데 쓰입니다.</p>
+      </div>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>어떻게 파이프라인이 순서를 보장하는가</div>
+        <p>각 작업(Job)은 독립된 실행 단위이지만, "이전 작업이 완료되면 실행"이라는 트리거로 체인처럼 연결되어 있어 Build → Static-Analysis → JUnit-Test → Deploy 순서가 강제됩니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>자동 세차장을 떠올리면 됩니다 — 차(소스 코드)를 넣으면 세차(Build) → 왁스(정적분석) → 헹굼(테스트) → 건조(배포)까지 사람이 중간에 손대지 않아도 순서대로 자동 진행됩니다. 한 단계가 실패하면(예: 세차가 제대로 안 됐으면) 다음 단계로 넘어가지 않는 것도 동일합니다.</p>
+      </div>
+
+      <div class="summary">
+        <div class="box-head">Part Ⅱ 정리</div>
+        <p>포털은 "YAML을 GUI로 다루는 것"(u2-1)과 "빌드~배포를 자동 연결하는 것"(u2-2) 두 기능을 보여줬습니다. <a href="#part3">Part Ⅲ</a>은 이 두 기능에 소스 저장소 관리까지 더해 실제 MSA(4개 서비스)를 배포합니다.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="part3">
+      <div class="unit-kicker">PART Ⅲ</div>
+      <h2>Container Platform 활용 — MSA 샘플앱 전체 자동배포</h2>
+      <p class="unit-lede">Container Platform의 세 가지 서비스 — ConfigMap(환경변수), Source Control(소스 저장소), Pipeline(빌드/배포 자동화) — 을 모두 엮어서, 4개의 독립 마이크로서비스로 구성된 MSA 샘플 앱을 사람이 kubectl을 직접 치지 않고 배포합니다.</p>
+
+      <h3 id="u3-1">01 · 실습 개요 & MSA Sample 아키텍처</h3>
+      <p>이번 실습 대상은 msa-sample-api, msa-sample-sd-api, msa-sample-ui, msa-sample-gateway 4개 서비스로 구성된 샘플 앱입니다(가이드: <code>https://github.com/K-PaaS/msa-sample</code>). 실습 절차는 크게 ① ConfigMap 생성 → ② 4개 <span class="term" title="소스코드를 버전별로 저장하고 관리하는 저장소(영어 repository)">레파지토리</span> 구축(소스컨트롤) → ③ 4개 서비스 빌드 및 배포(파이프라인) 순서로 진행됩니다.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>서비스</th><th>역할(원본 문구)</th></tr></thead>
+          <tbody>
+            <tr><td><code>msa-sample-ui</code></td><td>화면 서비스를 담당하는 API</td></tr>
+            <tr><td><code>msa-sample-gateway</code></td><td>API 서버 앞단에서 여러 API 서버들의 End-Point를 단일화하여 라우팅, 로드밸런싱 등의 역할을 하는 API</td></tr>
+            <tr><td><code>msa-sample-api</code></td><td>메인 화면 정보에 대한 서비스를 담당하는 API</td></tr>
+            <tr><td><code>msa-sample-sd-api</code></td><td>Side 화면 정보에 대한 서비스를 담당하는 API</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="color:var(--text-faint);font-size:0.9rem;">요청 흐름: 사용자 → <code>msa-sample-ui</code> → <code>msa-sample-gateway</code> → (<code>msa-sample-api</code>, <code>msa-sample-sd-api</code>)</p>
+
+      <figure>
+        <img src="assets/07_PaaS_실습/images/p100_x601.png" alt="MSA Sample 앱 아키텍처 다이어그램">
+        <figcaption>MSA Sample 앱 아키텍처 — 사용자 요청은 UI → Gateway를 거쳐 두 백엔드 API(api, sd-api)로 라우팅된다.</figcaption>
+      </figure>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 Part Ⅰ의 게시판 앱과 별개로 또 다른 MSA 예제를 다루는가</div>
+        <p>이번엔 "직접 빌드/배포"가 아니라 "소스 저장소 + 파이프라인이 대신 빌드/배포"하는 흐름을 보여주기 위해서입니다. 즉 같은 MSA 구조를, 이번엔 PaaS가 자동화해주는 방식으로 재현합니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디에 적용되는가 — Part Ⅰ 구조와 겹쳐보기</div>
+        <p>요청 흐름(사용자 → <code>msa-sample-ui</code> → <code>msa-sample-gateway</code> → <code>msa-sample-api</code>/<code>msa-sample-sd-api</code>)은 Part Ⅰ의 게시판 앱 구조(ui → zuul → board/comment/user)와 같은 패턴입니다. <code>msa-sample-gateway</code>가 <code>edu-msa-zuul</code>의 API Gateway 역할을, <code>msa-sample-api</code>/<code>-sd-api</code>가 각 백엔드 API 역할을 대신합니다.</p>
+      </div>
+
+      <h3 id="u3-2">02 · 포털 로그인 & ConfigMap으로 환경변수 배포</h3>
+      <p>4개 서비스가 서로의 주소(URL)를 알아야 통신할 수 있는데, 이 주소들을 각 서비스 코드에 하드코딩하는 대신 Kubernetes ConfigMap이라는 리소스에 모아두고 실행 시점에 주입합니다.</p>
+
+      <ol class="steps">
+        <li>
+          <h4>포털 접속 및 로그인</h4>
+          <pre><code>URL: http://portal.${HOST_DOMAIN}   ( ${HOST_DOMAIN} = Ingress 노드 플로팅 IP.nip.io )
+관리자 계정 초기 로그인 → Username: admin, Password: 초기화한 패스워드값
+(이후) 회원가입을 통해 등록한 사용자 계정으로 재로그인</code></pre>
+        </li>
+        <li>
+          <h4>ConfigMap 생성 (MSA 구성 배포 전 환경변수)</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 4개 서비스가 서로의 주소를 찾을 수 있도록, 그 주소값들을 담은 ConfigMap 리소스를 포털에 등록하는 것입니다.</p>
+          <pre><code><span class="cmd-comment"># ConfigMap YAML 링크: https://github.com/K-PaaS/msa-sample/blob/master/resource/configmap.yml</span>
+<span class="cmd-comment"># → 내용 복사 → 메모장에 붙여넣기 → {K8S_MASTER_NODE_IP} 자리에 컨트롤플레인 노드 퍼블릭 IP 입력</span>
+[Configmaps] 메뉴 → [생성] 클릭 → [Namespace] 'default' 선택 → YAML 붙여넣기 → 저장</code></pre>
+          <p style="color:var(--text-faint);font-size:0.9rem;">ConfigMap 데이터 예시(화면에서 확인되는 키, 실제 IP·포트 값은 실습 환경에 따라 달라짐):</p>
+          <pre><code>MSA_API_URL: http://xx.xx.xx.xx:30010
+MSA_SD_API_URL: http://xx.xx.xx.xx:30014
+MSA_UI_URL: http://xx.xx.xx.xx:30011
+MSA_GATEWAY_URL: http://xx.xx.xx.xx:30012</code></pre>
+          <figure>
+            <img src="assets/07_PaaS_실습/images/p108_x643.png" alt="MSA Sample 4개 서비스 주소를 ConfigMap으로 등록하는 화면">
+            <figcaption>MSA Sample 4개 서비스의 주소(MSA_API_URL 등)를 하나의 ConfigMap으로 등록하는 화면.</figcaption>
+          </figure>
+        </li>
+      </ol>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 URL을 ConfigMap으로 분리하는가</div>
+        <p>이것이 1강 12 Factor App의 "설정(Config)은 환경(environment)에 저장" 원칙의 실제 구현입니다. 각 서비스가 상대방 주소를 코드에 박아두면, 배포 환경(IP/포트)이 바뀔 때마다 코드를 다시 빌드해야 합니다. ConfigMap으로 분리하면 코드는 그대로 두고 설정값만 바꿔서 재배포할 수 있습니다.</p>
+      </div>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>어떻게 ConfigMap 값이 서비스에 전달되는가</div>
+        <p>포털에 등록한 ConfigMap(<code>MSA_API_URL</code> 등 4개 키)은 각 서비스 Pod가 실행될 때 환경변수 형태로 주입됩니다. 서비스 코드는 이 환경변수를 읽어 상대 서비스의 주소를 알아내므로, 코드를 다시 빌드하지 않고도 ConfigMap 값만 갱신해 재배포할 수 있습니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>전화번호를 사람 머릿속(코드)에 외워두면 번호가 바뀔 때마다 그 사람을 다시 교육시켜야 합니다. 대신 전화번호부(ConfigMap)에 적어두면 번호부만 고쳐 써도 누구나 최신 번호를 찾아 쓸 수 있습니다 — ConfigMap이 하는 일이 정확히 이것입니다.</p>
+      </div>
+
+      <h3 id="u3-3">03 · Source Control 서비스로 레파지토리 구성</h3>
+      <p>Container Platform에 내장된 소스컨트롤(Git) 서비스에 4개의 레파지토리(msa-sample-api, -sd-api, -ui, -gateway)를 만들고, K-PaaS 공식 GitHub의 원본 소스를 그대로 미러링해 옵니다.</p>
+
+      <p><strong>사전 준비 (최초 1회):</strong></p>
+      <pre><code><span class="cmd-comment"># 소스컨트롤 서비스 접속 (단독배포형 기준)</span>
+URL: http://{K8S_MASTER_NODE_IP}:30094
+<span class="cmd-comment"># 접속 초기 정보 확인</span>
+$ kubectl get configmap -n cp-portal cp-portal-configmap -o yaml | grep KEYCLOAK_ADMIN
+
+<span class="cmd-comment"># 레파지토리 사용을 위한 비밀번호 설정 (필수)</span>
+오른쪽 위 [ID] 클릭 → [내 정보관리] 클릭 → [비밀번호] 수정 → [수정] 클릭
+(이 비밀번호는 이후 계속 재사용하므로 잊지 않도록 주의)
+
+<span class="cmd-comment"># Git Bash 다운로드 및 설치</span>
+다운로드 링크: https://git-scm.com/downloads</code></pre>
+
+      <p><strong>레파지토리 생성 (4개 서비스 공통 패턴, msa-sample-api 예시):</strong></p>
+      <ol class="steps">
+        <li>
+          <h4>신규생성</h4>
+          <pre><code>[신규생성] 클릭 → [레파지토리명] "msa-sample-api" 입력 → [유형] 'Git' 선택 → [생성] 클릭</code></pre>
+          <figure>
+            <img src="assets/07_PaaS_실습/images/p114_x672.png" alt="소스컨트롤 포털 레파지토리 신규생성 화면">
+            <figcaption>소스컨트롤 포털에서 레파지토리(msa-sample-api)를 Git 유형으로 신규 생성하는 화면 — 나머지 3개(sd-api, ui, gateway)도 동일하게 반복한다.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <h4>원본 소스 주소 확인</h4>
+          <pre><code>[K-PaaS Github] 접속 → 'msa' 검색 → [msa-sample-api] 클릭 → [Code] 클릭 → [URL] 복사</code></pre>
+        </li>
+        <li>
+          <h4>로컬에서 미러 클론</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: K-PaaS 공식 GitHub의 원본 소스를 브랜치·이력까지 통째로 내 컴퓨터에 복사해오는 것입니다.</p>
+          <pre><code>[새 폴더(msa-sample)] 생성 → 그 안에서 [Git Bash] 실행
+$ git clone --mirror https://github.com/K-PaaS/msa-sample-api.git
+$ cd msa-sample-api.git/</code></pre>
+        </li>
+        <li>
+          <h4>소스컨트롤 포털의 레파지토리 클론 주소 복사</h4>
+          <pre><code>[소스컨트롤 포털] 접속 → [레파지토리(msa-sample-api)] 선택 → [레파지토리 클론] 클릭 → [복사] 클릭</code></pre>
+        </li>
+        <li>
+          <h4>업로드</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 방금 내 컴퓨터로 복사해온 원본 소스를 Container Platform 내장 소스컨트롤 저장소로 그대로 옮겨 싣는 것입니다.</p>
+          <pre><code>$ git push --mirror http://{KUBERNETE_IP}:30092/scm/git/{REPOSITORY_NAME}
+<span class="cmd-comment"># ※ 소스컨트롤 [내정보관리]에서 설정한 ID/PW 입력 (로그인 창이 뜨지 않으면 생략)</span></code></pre>
+        </li>
+        <li>
+          <h4>업로드 확인</h4>
+          <pre><code>[소스컨트롤 포털] 접속 → [레파지토리(msa-sample-api)] 선택 → 업로드된 소스 파일 확인</code></pre>
+          <p style="color:var(--text-faint);font-size:0.9rem;">→ 동일한 1)~6) 과정을 msa-sample-sd-api, msa-sample-ui, msa-sample-gateway 에도 반복합니다(Github URL: msa-sample-sd-api.git / msa-sample-ui.git / msa-sample-gateway.git).</p>
+        </li>
+      </ol>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 GitHub 원본을 그대로 미러링해서 내부 소스컨트롤에 다시 올리는가</div>
+        <p>실무에서 사내·폐쇄망 환경은 외부 인터넷(공개 GitHub)에 직접 접근하지 못하는 경우가 많습니다. Container Platform 내장 소스컨트롤에 미러링해두면, 이후 파이프라인이 외부 GitHub이 아니라 내부망의 소스컨트롤 주소만 보고도 빌드할 수 있습니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디에 적용되는가</div>
+        <p>소스컨트롤 접속 초기 계정 정보를 <code>kubectl get configmap ...</code> 명령으로 확인하는 것에서 알 수 있듯, 포털 서비스 자체도 결국 쿠버네티스 위에서 도는 애플리케이션입니다.</p>
+      </div>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>주의</div>
+        <p>레파지토리용 비밀번호는 이후 계속 재사용해야 하므로 반드시 기억해 둘 것. <code>git push --mirror</code> 시 로그인 창이 뜨지 않으면 이미 인증된 상태이므로 그 단계는 생략한다.</p>
+      </div>
+
+      <h3 id="u3-4">04 · Pipeline 서비스 설정 — Kube Config 등록 & 파이프라인 생성</h3>
+      <p>파이프라인이 실제로 Kubernetes 클러스터에 배포까지 하려면, 파이프라인 서비스가 클러스터에 접속할 수 있는 인증 정보(kube config)를 먼저 등록해야 합니다.</p>
+
+      <ol class="steps">
+        <li>
+          <h4>파이프라인 접속 및 로그인</h4>
+          <pre><code>URL: http://{K8S_MASTER_NODE_IP}:30084
+$ kubectl get configmap -n cp-portal cp-portal-configmap -o yaml | grep KEYCLOAK_ADMIN</code></pre>
+        </li>
+        <li>
+          <h4>Kube Config 조회 (컨트롤플레인 노드에서)</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 파이프라인 서비스에 등록해줄 클러스터 접속 인증 정보(kube config) 파일 내용을 확인해서 복사하는 것입니다.</p>
+          <pre><code>$ ls .kube/
+$ cat .kube/kubeconfig
+<span class="cmd-comment"># (복사 시 메모장 활용, 빈 칸/빈 줄이 추가되지 않도록 주의)</span></code></pre>
+        </li>
+        <li>
+          <h4>Kube Config 등록</h4>
+          <pre><code>[파이프라인관리] 메뉴 → [Kubernetes 정보관리] 클릭 → [Kube Config 등록] 클릭
+→ [Config 명] 입력 → 복사한 [Kube Config] 붙여넣기 → [등록] 클릭</code></pre>
+        </li>
+        <li>
+          <h4>파이프라인 생성</h4>
+          <pre><code>[Home] 이동 → [신규생성(New Pipeline)] 클릭 → [파이프라인명] 입력(예: msa-sample-pipeline) → [생성] 클릭</code></pre>
+          <figure>
+            <img src="assets/07_PaaS_실습/images/p144_x778.png" alt="Kube Config 등록 후 새 파이프라인 생성 화면">
+            <figcaption>Kube Config 등록을 마친 뒤 새 파이프라인(msa-sample-pipeline)을 생성하는 화면.</figcaption>
+          </figure>
+        </li>
+      </ol>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 kube config를 별도로 등록해야 하는가</div>
+        <p>파이프라인은 소스를 빌드하는 것과 별개로, 빌드된 이미지를 "어느 클러스터의 어느 네임스페이스에 배포할지" 알아야 합니다. kube config는 바로 그 클러스터 접속 인증서/주소 정보이며, 이것이 없으면 파이프라인의 Deploy 작업이 대상 클러스터를 찾을 수 없습니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디에 적용되는가</div>
+        <p>여기서 등록한 'msa-kube-config'는 이후 u3-5에서 4개 서비스의 배포(Deploy) 작업마다 "Kubernetes 정보" 항목에서 반복적으로 선택하게 됩니다 — 한 번만 등록해두면 여러 배포 작업이 함께 재사용합니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>kube config는 특정 사무실(Kubernetes 클러스터)에 들어갈 수 있는 출입증이라고 생각하면 됩니다. 파이프라인이 이 출입증을 미리 등록해둬야, 배포 작업을 실행할 때마다 "이 사무실에 들어가서 서비스를 배치해도 된다"는 자격을 증명할 수 있습니다.</p>
+      </div>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>주의</div>
+        <p>kube config 복사 시 빈 칸이나 빈 줄이 섞이면 등록이 실패하거나 인증 오류가 날 수 있으므로 메모장 등에서 원본 그대로 복사해야 합니다.</p>
+      </div>
+
+      <h3 id="u3-5">05 · 빌드+배포 작업 구성 및 실행 (4개 서비스 반복)</h3>
+      <p>u3-4에서 만든 파이프라인 안에 4개 서비스(api, sd-api, ui, gateway) 각각에 대해 "빌드 작업"과 "배포 작업"을 한 쌍씩 추가하고 실행합니다. 총 4쌍(8개 작업)이 만들어집니다.</p>
+
+      <p><strong>공통 패턴 (msa-sample-api 예시, 나머지 3개도 이름만 바꿔 동일 반복):</strong></p>
+      <ol class="steps">
+        <li>
+          <h4>새 작업(그룹) 추가</h4>
+          <pre><code>생성한 [파이프라인(msa-sample-pipeline)] 클릭 → [+ 새 작업 추가] 클릭
+(2번째 서비스부터는 [새 작업그룹 추가] 클릭)</code></pre>
+        </li>
+        <li>
+          <h4>빌드 작업 구성상세</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: msa-sample-api 소스를 빌드해 컨테이너 이미지로 만들 작업을 설정하는 것이며, Dockerfile은 이미지 이름만 입력하면 파이프라인이 알아서 자동으로 만들어줍니다.</p>
+          <pre><code>내 작업: "msa-api 빌드" 입력 → 작업유형 'Build' 선택 → 빌더유형 'Gradle' 선택
+→ 빌드 컨테이너 유형 'Kubernetes' 선택
+→ 컨테이너 이미지 저장소 정보: "msasampleapi" 입력 (Harbor에 저장할 이미지 이름, 소문자만)
+→ [Docker File 생성하기] 클릭
+  <span class="cmd-comment"># 자동 생성된 Docker File 예시:</span>
+  <span class="cmd-comment"># FROM openjdk:8-jdk-alpine</span>
+  <span class="cmd-comment"># ADD build/libs/$buildFile $buildFile</span>
+  <span class="cmd-comment"># ENV JAVA_OPTS="org.springframework.boot.loader.WarLauncher -Xms512m -Xmx1024m ..."</span></code></pre>
+          <figure>
+            <img src="assets/07_PaaS_실습/images/p146_x786.png" alt="빌드 작업 구성상세 화면 — Gradle/Kubernetes 빌드 설정">
+            <figcaption>빌드 작업 구성 화면 — 이미지 저장소 이름만 입력하면 Docker File을 자동으로 생성해준다(Gradle / Kubernetes 빌드 컨테이너).</figcaption>
+          </figure>
+        </li>
+        <li>
+          <h4>형상관리정보 입력</h4>
+          <pre><code>SCM 'Git' 선택 → 레파지토리 ID 입력 → 레파지토리 PW 입력
+→ 레파지토리 경로: http://{KUBERNETE_IP}:30092/scm/git/{REPOSITORY_NAME}
+→ [브랜치조회] 클릭 → 작업트리거 'Trigger when previous job is complete' 선택 → [저장] 클릭</code></pre>
+        </li>
+        <li>
+          <h4>배포 작업 새로 생성</h4>
+          <pre><code>빌드 작업 생성 확인 → [추가] 버튼 클릭</code></pre>
+        </li>
+        <li>
+          <h4>배포 작업 구성상세</h4>
+          <pre><code>작업명: "msa-api 배포" 입력 → 작업유형 'Deploy' 선택 → 유형 'Development' 선택
+→ 입력유형 '1. msa-api 빌드' 선택 (직전 빌드 작업 참조)
+→ 앱 이름: "msa-sample-api" 입력 → 앱 유형 'BackEnd' 선택
+→ Kubernetes 정보: 등록한 'msa-kube-config' 선택</code></pre>
+        </li>
+        <li>
+          <h4>배포 YAML 입력</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: msa-sample-api를 어떻게 배포할지 정의한 원본 YAML(Deployment/Service)을 그대로 가져와 파이프라인의 배포 작업에 붙여넣는 것입니다.</p>
+          <pre><code><span class="cmd-comment"># DEPLOYMENT.YML 링크: https://github.com/K-PaaS/msa-sample/blob/master/api/deployment.yml</span>
+<span class="cmd-comment"># SERVICE.YML 링크   : https://github.com/K-PaaS/msa-sample/blob/master/api/service.yml</span>
+위 링크 접속 → 내용 복사 → [DEPLOYMENT.YML] / [DEPLOYMENT_SERVICE.YML]에 붙여넣기
+→ 작업트리거 선택 → [저장] 클릭</code></pre>
+        </li>
+        <li>
+          <h4>작업 실행</h4>
+          <pre><code>빌드, 배포 작업 [실행](아이콘 클릭) → '작업(Job): 실행중'으로 상태 변경
+→ 시계 아이콘 클릭 시 로그 확인 가능 → [목록] 클릭 시 파이프라인 목록으로 이동</code></pre>
+          <figure>
+            <img src="assets/07_PaaS_실습/images/p152_x817.png" alt="빌드 배포 작업이 순서대로 실행되는 파이프라인 작업 목록 화면">
+            <figcaption>빌드 → 배포 작업이 순서대로 실행되는 모습 — 실행 아이콘과 상태 표시로 진행 상황을 확인할 수 있다.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <h4>나머지 3개 서비스 반복</h4>
+          <p style="color:var(--text-faint);font-size:0.9rem;">msa-sample-sd-api(이미지명 "msasamplesdapi", DEPLOYMENT.YML → <code>.../sd-api/deployment.yml</code>), msa-sample-ui(이미지명 "msasampleui", <code>.../ui/deployment.yml</code>), msa-sample-gateway(이미지명 "msasamplegateway", <code>.../gateway/deployment.yml</code>) 각각 [새 작업그룹 추가]로 새 빌드+배포 쌍을 만들어 1)~7) 동일하게 반복합니다.</p>
+        </li>
+      </ol>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 서비스마다 빌드/배포 "쌍"을 따로 만드는가</div>
+        <p>MSA는 서비스가 각자 독립적으로 빌드·배포되어야 한다는 원칙(1강, u1-1)이 파이프라인 설계에도 그대로 반영된 것입니다. 4개 서비스를 하나의 빌드 작업으로 합치면, 한 서비스만 고쳐도 전체를 다시 빌드해야 하는 모놀리식 문제가 파이프라인 안에서 재현되어 버립니다.</p>
+      </div>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>어떻게 "이전 작업 완료 시 실행" 트리거가 안전한 배포를 보장하는가</div>
+        <p>빌드가 실패하면 트리거 조건이 충족되지 않아 배포 작업이 아예 실행되지 않습니다. 즉 깨진 이미지가 클러스터에 배포되는 것을 파이프라인 구조 자체가 막아줍니다.</p>
+      </div>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>주의</div>
+        <p>레파지토리 경로 접속 시 로그인 창이 뜨지 않으면 이미 인증된 상태이므로 그 단계는 생략해도 됩니다(4번 반복하는 동안 흔히 헷갈리는 포인트).</p>
+      </div>
+
+      <h3 id="u3-6">06 · 배포 확인 및 MSA 접속</h3>
+      <p>4개 서비스 모두 빌드+배포가 끝나면, Container Platform Portal에서 Deployment/Service 리소스를 조회하고 실제 애플리케이션 엔드포인트로 접속해 확인합니다.</p>
+
+      <pre><code>[Container Platform Portal] 접속 (http://portal.{K8S_MASTER_NODE_IP}.nip.io/)
+→ [Workloads] 메뉴 → [Deployments] 선택 → 리소스 조회
+→ [Services] 메뉴 → [Services] 선택 → 리소스 조회
+
+<span class="cmd-comment"># 접속</span>
+{K8S_MASTER_NODE_IP}:30011/hello</code></pre>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 접속 주소가 <code>30011/hello</code>인가</div>
+        <p>u3-2에서 ConfigMap에 등록한 <code>MSA_UI_URL</code>의 포트가 30011이었습니다. 4개 서비스가 모두 정상 배포되면, 그중 화면(UI) 서비스인 <code>msa-sample-ui</code>의 NodePort(30011)로 접속해 전체 MSA 앱이 정상 동작하는지 확인합니다.</p>
+      </div>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>Part Ⅲ 전체가 어떻게 하나로 연결되는가</div>
+        <p>ConfigMap(환경변수, u3-2) → Source Control(소스 저장소, u3-3) → Pipeline(빌드+배포 자동화, u3-4~u3-5)이라는 3개 K-PaaS 서비스가 순서대로 맞물려, 사람이 kubectl 명령어를 한 줄도 치지 않고 4개 마이크로서비스를 배포했습니다. Part Ⅰ에서 사람이 직접 했던 모든 작업(이미지 빌드, yaml 수정, apply)을 파이프라인이 대신 수행한 것입니다.</p>
+      </div>
+
+      <div class="summary">
+        <div class="box-head">Part Ⅲ 정리</div>
+        <p>인트로의 <a href="#compare-table">비교표 A(배포 방식 3단 비교)</a>를 다시 참고하면, Part Ⅰ·Ⅱ·Ⅲ가 같은 목표를 얼마나 다른 자동화 수준으로 달성했는지 한눈에 정리됩니다.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="part4">
+      <div class="unit-kicker">PART Ⅳ</div>
+      <h2>Kubernetes CLI 실습</h2>
+      <p class="unit-lede">지금까지 포털/파이프라인이 대신해주던 일을 다시 원래의 kubectl 명령어로 되짚어 정리합니다. 화면 뒤에서 실제로 무슨 일이 벌어지는지 이해하기 위한 마무리 실습입니다.</p>
+
+      <h3 id="u4-1">01 · kubectl 기본 명령어 — Namespace / Pod / Service</h3>
+      <p>예제1은 <code>kubectl run</code>으로 만든 단독 Pod를 Service로 연결하는 가장 기본적인 흐름입니다.</p>
+
+      <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 실습용 구역(Namespace)을 만들고 그 안에 nginx 파드 하나를 띄운 뒤, 외부에서 접속할 수 있는 창구(Service)를 연결하는 것입니다.</p>
+      <pre><code><span class="cmd-comment"># Namespace 배포/조회</span>
+$ kubectl create namespace soongsil
+$ kubectl get namespace
+
+<span class="cmd-comment"># Pod 배포</span>
+$ kubectl run ssu-nginx --image=nginx:1.25 -n soongsil
+
+<span class="cmd-comment"># Pod 조회/상세조회</span>
+$ kubectl get pod -n soongsil
+$ kubectl describe pod ssu-nginx -n soongsil
+
+<span class="cmd-comment"># Service 배포 (Pod 연결)</span>
+$ kubectl expose pod ssu-nginx --type=NodePort --port 80 --target-port=80 --name=ssu-nginx -n soongsil
+
+<span class="cmd-comment"># Service 조회/상세조회</span>
+$ kubectl get service -n soongsil
+$ kubectl describe service ssu-nginx -n soongsil</code></pre>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이 실습을 마지막에 다시 하는가</div>
+        <p>포털/파이프라인은 결국 이 kubectl 명령어들을 사람 대신 실행해 주는 것일 뿐입니다. CLI를 알아야 포털 화면 뒤에서 무슨 일이 벌어지는지 이해하고, 포털이 없는 환경(운영 서버 터미널 등)에서도 동일하게 다룰 수 있습니다.</p>
+      </div>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>어떻게 Pod와 Service가 연결되는가</div>
+        <p><code>kubectl expose pod</code>는 지정한 Pod의 레이블을 selector로 삼아 Service를 만듭니다. 이 Service가 NodePort(80)를 열어주므로, 클러스터 외부에서 고정 포트로 접속하면 내부적으로 해당 Pod의 컨테이너 포트(80)까지 트래픽이 전달됩니다.</p>
+      </div>
+
+      <h3 id="u4-2">02 · kubectl 기본 명령어 — Deployment / 삭제</h3>
+      <p>예제2는 <code>kubectl create deployment</code>로 만든 Deployment가 예제1의 단독 Pod와 어떻게 다르게 동작하는지(자동 복구) 비교하는 실습입니다.</p>
+
+      <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: Pod 2개를 유지하는 Deployment를 만든 뒤 Pod를 강제로 지워보면서, 자동으로 다시 채워지는지(자동 복구)를 직접 확인하는 것입니다.</p>
+      <pre><code><span class="cmd-comment"># Deployment 배포</span>
+$ kubectl create deployment ssu-nginx2 --image=nginx:1.26 --port=80 --replicas=2 -n soongsil
+
+<span class="cmd-comment"># Deployment 조회/상세조회</span>
+$ kubectl get deployment -n soongsil
+$ kubectl describe deployment ssu-nginx2 -n soongsil
+
+<span class="cmd-comment"># Service 배포 (Deployment 연결)</span>
+$ kubectl expose deployment ssu-nginx2 --type=NodePort --port 80 --target-port=80 --name=ssu-nginx2 -n soongsil
+
+<span class="cmd-comment"># Service 조회/상세조회</span>
+$ kubectl get service -n soongsil
+$ kubectl describe service ssu-nginx2 -n soongsil
+
+<span class="cmd-comment"># Service 수정 (NodePort 변경)</span>
+$ kubectl edit service ssu-nginx2 -n soongsil
+<span class="cmd-comment"># 수정한 NodePort로 브라우저 접속: {KUBERNETES_IP}:{NODE_PORT}</span>
+
+<span class="cmd-comment"># Pod 삭제</span>
+$ kubectl delete pod ssu-nginx2-568f6d6b4-d6x5m -n soongsil
+$ kubectl get pod -n soongsil   <span class="cmd-comment"># Pod 개수가 유지되는지 확인</span>
+
+<span class="cmd-comment"># Deployment 삭제</span>
+$ kubectl delete deployment ssu-nginx2 -n soongsil
+$ kubectl get pod -n soongsil   <span class="cmd-comment"># Pod 삭제 확인</span></code></pre>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 Pod를 지워도 개수가 유지되는가</div>
+        <p>이것이 Deployment의 핵심 동작입니다 — Deployment는 "몇 개의 Pod를 유지할지"를 선언(<code>replicas</code>)해두고, 실제 Pod가 죽으면 즉시 새 Pod를 만들어 채웁니다. 반면 u4-1에서 <code>kubectl run</code>으로 만든 단독 Pod는 지우면 그걸로 끝입니다.</p>
+      </div>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>어떻게 자동 복구가 이루어지는가</div>
+        <p><code>kubectl delete pod</code>로 Pod 하나를 삭제해도 Deployment 컨트롤러가 즉시 감지하고 <code>replicas</code> 수만큼 새 Pod를 재생성합니다. 반면 <code>kubectl delete deployment</code>는 컨트롤러 자체를 지우므로 Pod도 함께 사라집니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>Pod 하나만 만드는 것은 "직원 한 명을 그냥 채용"하는 것이고, Deployment는 "이 자리는 항상 2명이 있어야 한다"는 규정을 세워두는 것에 가깝습니다. 직원 한 명이 그만두면(Pod 삭제) 그 규정에 따라 바로 새 직원을 채용해 자리를 채우지만, 규정 자체(Deployment)를 없애면 더 이상 채용도 일어나지 않습니다.</p>
+      </div>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>주의</div>
+        <p>예제1(kubectl run 단독 Pod)과 예제2(kubectl create deployment)의 차이를 반드시 구분해서 이해해야 합니다 — Pod 단독 생성은 Deployment의 "자동 복구" 기능이 없습니다.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>목적</th><th>명령어 패턴</th><th>실습 예시</th></tr></thead>
+          <tbody>
+            <tr><td>Namespace 생성</td><td><code>kubectl create namespace {NAME}</code></td><td><code>kubectl create namespace soongsil</code></td></tr>
+            <tr><td>Namespace 조회</td><td><code>kubectl get namespace</code></td><td>—</td></tr>
+            <tr><td>Pod 생성(단독)</td><td><code>kubectl run {POD} --image={IMG}:{TAG} -n {NS}</code></td><td><code>kubectl run ssu-nginx --image=nginx:1.25 -n soongsil</code></td></tr>
+            <tr><td>Pod 조회/상세</td><td><code>kubectl get pod -n {NS}</code> / <code>kubectl describe pod {POD} -n {NS}</code></td><td>—</td></tr>
+            <tr><td>Service 생성(Pod 연결)</td><td><code>kubectl expose pod {POD} --type=NodePort --port {P} --target-port={TP} --name={SVC} -n {NS}</code></td><td><code>kubectl expose pod ssu-nginx --type=NodePort --port 80 --target-port=80 --name=ssu-nginx -n soongsil</code></td></tr>
+            <tr><td>Deployment 생성</td><td><code>kubectl create deployment {NAME} --image={IMG}:{TAG} --port={P} --replicas={N} -n {NS}</code></td><td><code>kubectl create deployment ssu-nginx2 --image=nginx:1.26 --port=80 --replicas=2 -n soongsil</code></td></tr>
+            <tr><td>Deployment 조회/상세</td><td><code>kubectl get deployment -n {NS}</code> / <code>kubectl describe deployment {NAME} -n {NS}</code></td><td>—</td></tr>
+            <tr><td>Service 생성(Deployment 연결)</td><td><code>kubectl expose deployment {NAME} --type=NodePort --port={P} --target-port={TP} --name={SVC} -n {NS}</code></td><td><code>kubectl expose deployment ssu-nginx2 --type=NodePort --port 80 --target-port=80 --name=ssu-nginx2 -n soongsil</code></td></tr>
+            <tr><td>Service 수정</td><td><code>kubectl edit service {SVC} -n {NS}</code></td><td><code>kubectl edit service ssu-nginx2 -n soongsil</code></td></tr>
+            <tr><td>Pod 삭제</td><td><code>kubectl delete pod {POD} -n {NS}</code></td><td><code>kubectl delete pod ssu-nginx2-568f6d6b4-d6x5m -n soongsil</code></td></tr>
+            <tr><td>Deployment 삭제</td><td><code>kubectl delete deployment {NAME} -n {NS}</code></td><td><code>kubectl delete deployment ssu-nginx2 -n soongsil</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="lab-0714">
+      <div class="unit-kicker">실전 실습 자료</div>
+      <h2>실전 실습 자료 · 트러블슈팅 — 2026-07-14 수업 원본</h2>
+      <p class="unit-lede">이 절은 실제 2026-07-14 수업에서 진행한 실습 원본 파일입니다. Part Ⅰ에서 설명한 MSA 게시판 배포를 그날 학생이 직접 실행한 명령어 기록과, 실습 중 실제로 겪은 오류 2건의 트러블슈팅 노트를 재구성 없이 그대로 옮겼습니다.</p>
+
+      <h3 id="lab-0714-1">01 · 실습 원본 절차 — MSA Application 배포 (학생 실행 기록)</h3>
+      <p>원본 파일: <code>MSA_게시판 실습 자료.txt</code>. Part Ⅰ(u1-2~u1-7)에서 개념 설명용으로 정리한 절차와 같은 배포이지만, 아래는 그날 실제로 입력한 명령어와 SQL을 그대로 옮긴 것입니다.</p>
+
+      <ol class="steps">
+        <li>
+          <h4>배포 파일 다운로드</h4>
+          <pre><code>$ cd ~
+$  git clone https://github.com/K-PaaS/edu-msa-file.git</code></pre>
+        </li>
+        <li>
+          <h4>redis-msa-ui.yaml 수정 & 배포</h4>
+          <pre><code>$ vim ~/edu-msa-file/Kubernetes/redis-msa-ui.yaml
+
+$ cd ~/edu-msa-file/Kubernetes/
+$ kubectl apply -f redis-msa-ui.yaml</code></pre>
+        </li>
+        <li>
+          <h4>mysql yaml 수정 & 배포 (board/comment/user)</h4>
+          <pre><code>$ vim ~/edu-msa-file/Kubernetes/mysql-msa-board.yaml
+$ vim ~/edu-msa-file/Kubernetes/mysql-msa-comment.yaml
+$ vim ~/edu-msa-file/Kubernetes/mysql-msa-user.yaml
+
+$ cd ~/edu-msa-file/Kubernetes/
+$ kubectl apply -f mysql-msa-board.yaml -f mysql-msa-comment.yaml -f mysql-msa-user.yaml</code></pre>
+        </li>
+        <li>
+          <h4>Board DB 접속 · 로그인 · DB/테이블 생성 (원본 그대로)</h4>
+          <pre><code>$ kubectl get pods
+<span class="cmd-comment"># kubectl exec -it ${POD_NAME} -- /bin/bash</span>
+예시) $ kubectl exec -it mysql-msa-board-xxxxxxxxxx-xxxxx -- /bin/bash
+
+# mysql -u root -p
+Enter password: password
+
+mysql&gt; CREATE DATABASE msa_board default CHARACTER SET UTF8;
+mysql&gt; USE msa_board;
+mysql&gt; CREATE TABLE `TB_BOARD` (
+  `board_seq` int(11) NOT NULL AUTO_INCREMENT,
+  `board_title` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
+  `board_text` mediumtext COLLATE utf8_unicode_ci,
+  `write_user_id` varchar(20) COLLATE utf8_unicode_ci NOT NULL,
+  `write_user_name` varchar(20) COLLATE utf8_unicode_ci NOT NULL,
+  `use_yn` varchar(1) COLLATE utf8_unicode_ci DEFAULT 'Y',
+  `create_dt` datetime NOT NULL,
+  `update_dt` datetime NOT NULL,
+  PRIMARY KEY (`board_seq`)
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+&gt; exit
+# exit</code></pre>
+        </li>
+        <li>
+          <h4>Comment DB 접속 · 로그인 · DB/테이블 생성 (원본 그대로)</h4>
+          <pre><code>$ kubectl get pods
+<span class="cmd-comment"># kubectl exec -it ${POD_NAME} -- /bin/bash</span>
+예시) $ kubectl exec -it mysql-msa-comment-xxxxxxxxxx-xxxxx -- /bin/bash
+
+# mysql -u root -p
+Enter password: password
+
+mysql&gt; CREATE DATABASE msa_comment default CHARACTER SET UTF8;
+mysql&gt; USE msa_comment;
+mysql&gt; CREATE TABLE `TB_COMMENT` (
+  `comment_seq` int(11) NOT NULL AUTO_INCREMENT,
+  `board_seq` int(11) NOT NULL,
+  `comment` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `write_user_id` varchar(20) COLLATE utf8_unicode_ci NOT NULL,
+  `write_user_name` varchar(20) COLLATE utf8_unicode_ci NOT NULL,
+  `use_yn` varchar(1) COLLATE utf8_unicode_ci DEFAULT 'Y',
+  `create_dt` datetime NOT NULL,
+  `update_dt` datetime NOT NULL,
+  PRIMARY KEY (`comment_seq`)
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+&gt; exit
+# exit</code></pre>
+        </li>
+        <li>
+          <h4>User DB 접속 · 로그인 · DB/테이블 생성 (원본 그대로)</h4>
+          <pre><code>$ kubectl get pods
+<span class="cmd-comment"># kubectl exec -it ${POD_NAME} -- /bin/bash</span>
+예시) $ kubectl exec -it mysql-msa-user-xxxxxxxxxx-xxxxx -- /bin/bash
+
+# mysql -u root -p
+Enter password: password
+
+mysql&gt; CREATE DATABASE msa_user default CHARACTER SET UTF8;
+mysql&gt; USE msa_user;
+mysql&gt; CREATE TABLE `TB_USER` (
+  `user_seq` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` varchar(20) COLLATE utf8_unicode_ci NOT NULL,
+  `user_passwd` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
+  `user_name` varchar(20) COLLATE utf8_unicode_ci NOT NULL,
+  `use_yn` varchar(1) COLLATE utf8_unicode_ci DEFAULT 'Y',
+  `create_dt` datetime NOT NULL,
+  `update_dt` datetime NOT NULL,
+  PRIMARY KEY (`user_seq`),
+  UNIQUE KEY `id_key` (`user_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+&gt; exit
+# exit</code></pre>
+          <p style="color:var(--text-faint);font-size:0.9rem;">AUTO_INCREMENT 값이 board=15, comment=18, user=15로 서로 다른 것은 실습 중 실제로 데이터를 여러 번 넣고 지운 흔적입니다 — Part Ⅰ에 실린 예시 yaml은 AUTO_INCREMENT=1인 초기 상태입니다.</p>
+        </li>
+        <li>
+          <h4>pom.xml 의존성 추가 (원본 파일 표기 그대로)</h4>
+          <pre><code>&lt;dependency&gt;
+	&lt;groupId&gt;org.hibernate&lt;/groupId&gt;
+	&lt;artifactId&gt;hibernate-validator&lt;/artifactId&gt;
+	&lt;version&gt;6.0.12.Final&lt;/version&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+	&lt;groupId&gt;cglib&lt;/groupId&gt;
+	&lt;artifactId&gt;cglib&lt;/artifactId&gt;
+	&lt;version&gt;3.2.7&lt;/version&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+	&lt;groupId&gt;org.mybatis&lt;/groupId&gt;
+	&lt;artifactId&gt;mybatis-spring&lt;/artifactId&gt;
+	&lt;version&gt;1.3.2&lt;/version&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+	&lt;groupId&gt;org.mybatis&lt;/groupId&gt;
+	&lt;artifactId&gt;mybatis&lt;/artifactId&gt;
+	&lt;version&gt;3.4.6&lt;/version&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+	&lt;groupId&gt;mysql&lt;/groupId&gt;
+	&lt;artifactId&gt;mysql-connector-java&lt;/artifactId&gt;
+	&lt;version&gt;5.1.31&lt;/version&gt;
+&lt;/dependency&gt;
+
+빌드시 'clean all' -&gt; 'clean install'로 변경</code></pre>
+          <p style="color:var(--text-faint);font-size:0.9rem;">이 중 <code>hibernate-validator 6.0.12.Final</code>이 바로 아래 02번 트러블슈팅의 원인이 됩니다.</p>
+        </li>
+        <li>
+          <h4>이미지 저장소 로그인 & 빌드·태그·업로드 (podman, 5개 서비스)</h4>
+          <pre><code>$ sudo podman login docker.io
+Username: 아이디 입력
+Password: 패스워드 입력
+
+$ cd ~/edu-msa-file/Docker/edu-msa-board/
+$ sudo podman build --tag edu-msa-board:latest .
+$ sudo podman tag edu-msa-board ${도커허브 ID}/edu-msa-board
+$ sudo podman push ${도커허브 ID}/edu-msa-board
+
+$ cd ~/edu-msa-file/Docker/edu-msa-comment/
+$ sudo podman build --tag edu-msa-comment:latest .
+$ sudo podman tag edu-msa-comment ${도커허브 ID}/edu-msa-comment
+$ sudo podman push ${도커허브 ID}/edu-msa-comment
+
+$ cd ~/edu-msa-file/Docker/edu-msa-ui/
+$ sudo podman build --tag edu-msa-ui:latest .
+$ sudo podman tag edu-msa-ui ${도커허브 ID}/edu-msa-ui
+$ sudo podman push ${도커허브 ID}/edu-msa-ui
+
+$ cd ~/edu-msa-file/Docker/edu-msa-user/
+$ sudo podman build --tag edu-msa-user:latest .
+$ sudo podman tag edu-msa-user ${도커허브 ID}/edu-msa-user
+$ sudo podman push ${도커허브 ID}/edu-msa-user
+
+$ cd ~/edu-msa-file/Docker/edu-msa-zuul/
+$ sudo podman build --tag edu-msa-zuul:latest .
+$ sudo podman tag edu-msa-zuul ${도커허브 ID}/edu-msa-zuul
+$ sudo podman push ${도커허브 ID}/edu-msa-zuul</code></pre>
+          <p style="color:var(--text-faint);font-size:0.9rem;">Part Ⅰ(u1-6)의 정리본은 <code>docker</code> 명령어 기준이지만, 실제 수업 환경에서는 <code>sudo podman</code>(도커 호환 CLI)으로 동일한 build/tag/push 절차를 수행했습니다.</p>
+        </li>
+        <li>
+          <h4>yaml 최종 수정 · 배포 · 접속 확인</h4>
+          <pre><code>$ vim ~/edu-msa-file/Kubernetes/edu-msa-board.yaml
+$ vim ~/edu-msa-file/Kubernetes/edu-msa-comment.yaml
+$ vim ~/edu-msa-file/Kubernetes/edu-msa-ui.yaml
+$ vim ~/edu-msa-file/Kubernetes/edu-msa-user.yaml
+$ vim ~/edu-msa-file/Kubernetes/edu-msa-zuul.yaml
+
+$ cd ~/edu-msa-file/Kubernetes/
+$ kubectl apply -f edu-msa-board.yaml -f edu-msa-comment.yaml -f edu-msa-ui.yaml -f edu-msa-user.yaml -f edu-msa-zuul.yaml
+
+$ kubectl get pods
+$ kubectl get service
+
+<span class="cmd-comment"># MSA Application 포털 접속</span>
+{KUBERNETES_IP}:30001/user/login</code></pre>
+        </li>
+      </ol>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 Part Ⅰ 설명 뒤에 이 원본을 또 보여주는가</div>
+        <p>Part Ⅰ의 절차는 개념을 이해시키기 위해 다듬어 정리한 버전이고, 위 기록은 실습 당일 학생이 실제로 입력한 명령어와 SQL 그대로입니다. <code>AUTO_INCREMENT</code> 값이 board=15, comment=18, user=15로 제각각 남아있는 것도 실제로 데이터를 여러 번 넣고 지운 흔적입니다. 교재로 배운 절차와 실제 실습 결과물이 어떻게 다를 수 있는지 비교해 보는 것이 이 절의 목적입니다.</p>
+      </div>
+
+      <h3 id="lab-0714-2">02 · 트러블슈팅 ① — hibernate-validator 버전 충돌</h3>
+      <p>원본 파일: <code>k8s_msa_summary(강사님 플러그인 추가 했을 경우 해결 방법).md</code> (작성일 2026-07-15, 환경: NHN Cloud / Kubernetes v1.33.5 / K-PaaS MSA). 위 01번 단계에서 추가한 pom.xml 의존성 중 <code>hibernate-validator 6.0.12</code>가 실제로 기동 오류를 일으켰습니다.</p>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>증상 & 원인</div>
+        <p><strong>증상</strong> — 배포 후 다음 예외로 애플리케이션이 기동 실패:</p>
+        <pre><code>BeanCreationException: Error creating bean with name
+'org.springframework.validation.beanvalidation.OptionalValidatorFactoryBean'
+Caused by: java.lang.NoSuchMethodError:
+javax.validation.BootstrapConfiguration.getClockProviderClassName()</code></pre>
+        <p><strong>원인</strong> — 강사님 커스텀 dependency로 추가된 <code>hibernate-validator 6.0.12</code>가 Spring 4.3.x와 호환되지 않음(hibernate-validator 6.x는 Bean Validation 2.0을 요구하지만, Spring 4.3.x는 Bean Validation 1.1 기반이라 버전 불일치로 충돌 발생).</p>
+      </div>
+
+      <p><strong>해결</strong> — board / comment / user pom.xml의 커스텀 dependency 블록 수정:</p>
+      <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 충돌을 일으킨 hibernate-validator 버전을 낮추고, 함께 필요한 호환 라이브러리를 추가해 버전 충돌을 없애는 것입니다.</p>
+      <pre><code>&lt;!-- 변경 전 --&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.hibernate&lt;/groupId&gt;
+    &lt;artifactId&gt;hibernate-validator&lt;/artifactId&gt;
+    &lt;version&gt;6.0.12.Final&lt;/version&gt;
+&lt;/dependency&gt;
+
+&lt;!-- 변경 후 --&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.hibernate&lt;/groupId&gt;
+    &lt;artifactId&gt;hibernate-validator&lt;/artifactId&gt;
+    &lt;version&gt;5.4.3.Final&lt;/version&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;javax.validation&lt;/groupId&gt;
+    &lt;artifactId&gt;validation-api&lt;/artifactId&gt;
+    &lt;version&gt;1.1.0.Final&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+      <p style="color:var(--text-faint);font-size:0.9rem;">변경 요약: ① hibernate-validator 6.0.12 → 5.4.3(다운그레이드) ② javax.validation 1.1.0 추가(Spring 4.3.x 호환 버전) ③ 원래 board에만 있던 httpclient 4.4를 comment/user에도 추가(누락 시 commons-logging 충돌로 동일 오류가 재발할 수 있음).</p>
+
+      <p>같은 실습 폴더의 <code>pom.xml 추가.txt</code>에는 다음 의존성 추가 내용도 함께 기록되어 있습니다(원문 그대로):</p>
+      <pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;org.mybatis&lt;/groupId&gt;
+    &lt;artifactId&gt;mybatis&lt;/artifactId&gt;
+    &lt;version&gt;3.5.19&lt;/version&gt;
+&lt;/dependency&gt;
+
+&lt;!-- Spring JDBC --&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-jdbc&lt;/artifactId&gt;
+    &lt;version&gt;6.2.8&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+
+      <p><strong>재빌드 순서 (board/comment/user 3개 공통)</strong>:</p>
+      <pre><code>1. pom.xml 수정 (board / comment / user)
+2. eGovFrame Maven clean install
+3. MobaXterm으로 war 파일 서버 업로드
+4. Docker 재빌드/푸시
+   sudo docker build --tag edu-msa-{서비스명}:latest .
+   sudo docker tag edu-msa-{서비스명} {도커허브ID}/edu-msa-{서비스명}
+   sudo docker push {도커허브ID}/edu-msa-{서비스명}
+5. 파드 재시작
+   kubectl rollout restart deployment/edu-msa-{서비스명}</code></pre>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>애초에 왜 이 dependency가 필요했는가</div>
+        <p>원본 노트의 참고 사항을 그대로 옮기면: "강사님 제안처럼 커스텀 dependency 자체를 넣지 않으면 egovframework가 검증된 버전 조합을 자동으로 관리해줘서 이 충돌이 애초에 발생하지 않음." 즉 이번 충돌은 프레임워크 결함이 아니라, 검증되지 않은 최신 라이브러리 버전을 수동으로 끼워 넣었을 때 생기는 전형적인 의존성 충돌 사례입니다.</p>
+      </div>
+
+      <h3 id="lab-0714-3">03 · 트러블슈팅 ② — MySQL PVC 미설정으로 인한 DB 데이터 소실</h3>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>증상 & 원인</div>
+        <p><strong>증상</strong>:</p>
+        <pre><code>Caused by: java.sql.SQLSyntaxErrorException: Unknown database 'msa_user'</code></pre>
+        <p><strong>원인</strong> — MySQL deployment에 <span class="term" title="쿠버네티스 파드가 재생성되어도 데이터가 사라지지 않도록 외부 저장 공간을 미리 요청해 연결해두는 리소스(PersistentVolumeClaim)">PVC(PersistentVolumeClaim)</span>가 없어서, <span class="term" title="실제로 띄워서 동작 중인 서버(가상머신) 한 대">인스턴스</span> 중지/재시작으로 파드가 재생성될 때 DB 데이터가 초기화됨.</p>
+      </div>
+
+      <p><strong>임시 해결</strong>(DB/테이블 재생성, board 예시 — comment/user도 deployment 이름·DB명·테이블명만 바꿔 동일 반복):</p>
+      <pre><code># board
+kubectl exec -it -n default deployment/mysql-msa-board -- mysql -u root -ppassword -e "
+CREATE DATABASE msa_board default CHARACTER SET UTF8;
+USE msa_board;
+CREATE TABLE \`TB_BOARD\` (
+  \`board_seq\` int(11) NOT NULL AUTO_INCREMENT,
+  \`board_title\` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
+  \`board_text\` mediumtext COLLATE utf8_unicode_ci,
+  \`write_user_id\` varchar(20) COLLATE utf8_unicode_ci NOT NULL,
+  \`write_user_name\` varchar(20) COLLATE utf8_unicode_ci NOT NULL,
+  \`use_yn\` varchar(1) COLLATE utf8_unicode_ci DEFAULT 'Y',
+  \`create_dt\` datetime NOT NULL,
+  \`update_dt\` datetime NOT NULL,
+  PRIMARY KEY (\`board_seq\`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;"</code></pre>
+      <p style="color:var(--text-faint);font-size:0.9rem;">comment/user도 동일 패턴(<code>deployment/mysql-msa-comment</code>, <code>deployment/mysql-msa-user</code> + 각 DB명·테이블명)으로 반복합니다.</p>
+
+      <p><strong>근본 해결 — PVC yaml 작성 및 적용</strong>:</p>
+      <pre><code># 파일 생성
+vim ~/edu-msa-file/Kubernetes/mysql-msa-board-pvc.yaml</code></pre>
+
+      <p><code>mysql-msa-board-pvc.yaml</code> (comment/user도 name만 바꿔 동일):</p>
+      <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 파드가 재시작돼도 데이터가 사라지지 않도록, 1Gi 용량의 외부 저장 공간을 미리 요청해두는 선언입니다.</p>
+      <pre><code>apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-msa-board-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi</code></pre>
+
+      <pre><code>cd ~/edu-msa-file/Kubernetes/
+kubectl apply -f mysql-msa-board-pvc.yaml
+kubectl apply -f mysql-msa-comment-pvc.yaml
+kubectl apply -f mysql-msa-user-pvc.yaml
+
+<span class="cmd-comment"># 상태 확인 (Bound 되어야 정상)</span>
+kubectl get pvc -n default</code></pre>
+
+      <p><strong>MySQL Deployment에 PVC 연결</strong> (mysql-msa-board.yaml 수정 예시):</p>
+      <pre><code>spec:
+  containers:
+  - name: mysql-msa-board
+    image: mysql:5.7
+    env:
+    - name: MYSQL_ROOT_PASSWORD
+      value: "password"
+    volumeMounts:
+    - name: mysql-board-storage
+      mountPath: /var/lib/mysql       # MySQL 데이터 저장 경로
+  volumes:
+  - name: mysql-board-storage
+    persistentVolumeClaim:
+      claimName: mysql-msa-board-pvc  # 위에서 만든 PVC 이름</code></pre>
+      <p style="color:var(--text-faint);font-size:0.9rem;">comment / user도 동일한 방식으로 각각 적용. PVC 적용 후 파드가 재생성되면 DB가 다시 초기화되므로 위 "임시 해결" 명령어를 한 번 더 실행해야 하며, 이후부터는 인스턴스를 재시작해도 데이터가 유지됩니다.</p>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>어떻게 PVC가 재시작 후에도 데이터를 지켜주는가</div>
+        <p>PVC 없이 MySQL을 배포하면 데이터는 파드 컨테이너 내부(임시 레이어)에 저장되어, 파드가 재생성되는 순간(인스턴스 재시작, 노드 장애 등) 함께 사라집니다. PersistentVolumeClaim으로 <code>/var/lib/mysql</code> 경로를 외부 스토리지에 연결해두면 파드가 다시 만들어져도 같은 PVC를 다시 마운트하므로 데이터가 유지됩니다 — u1-3에서 강조한 "상태(Data)와 프로세스(Pod)의 분리" 원칙이 실제로 지켜지지 않으면 무슨 일이 생기는지 보여주는 사례입니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>냉장고(파드, MySQL 컨테이너)를 새 것으로 교체하면 안에 있던 음식(데이터베이스 내용)도 함께 사라집니다. PVC는 냉장고 밖에 따로 마련해둔 저장 창고와 같아서, 냉장고를 통째로 바꿔도(파드 재생성) 창고에 있던 음식(데이터)은 그대로 남아있고 새 냉장고가 다시 그 창고를 연결해서 씁니다.</p>
+      </div>
+
+      <h3 id="lab-0714-4">04 · 그 외 배포 트러블슈팅 & 인스턴스 재시작 절차</h3>
+      <p>같은 실습 노트에 기록된 그 외 오류들과, 인스턴스 중지/재시작 시 실제로 수행한 절차입니다.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>문제</th><th>원인</th><th>해결</th></tr></thead>
+          <tbody>
+            <tr><td><code>permission denied</code> (docker.sock)</td><td>사용자가 docker 그룹 미포함</td><td><code>sudo docker build/push</code> 사용</td></tr>
+            <tr><td><code>push access denied</code></td><td>sudo 실행 시 root 계정 기준으로 동작</td><td><code>sudo docker login</code> 후 push</td></tr>
+            <tr><td><code>InvalidImageName</code></td><td>yaml image 필드 오타</td><td>image 필드 올바르게 수정 후 재apply</td></tr>
+            <tr><td><code>PodSecurity Warning</code></td><td>securityContext 미설정</td><td>경고만 발생, 배포는 정상(운영 시 설정 필요)</td></tr>
+            <tr><td>cp-portal Error Pod</td><td>노드 셧다운 잔재</td><td>Error Pod 일괄 삭제 후 uncordon</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="color:var(--text-faint);font-size:0.9rem;">이 코드가 하는 일을 한 줄로 요약하면: 인스턴스(서버)를 끄기 전에 워커 노드에서 파드를 안전하게 비우고(drain), 다시 켠 뒤에는 그 노드를 원상 복구시켜(uncordon) 다시 작업을 받게 하는 절차입니다.</p>
+      <pre><code><span class="cmd-comment"># 중지 전 (워커 노드별로 실행)</span>
+kubectl drain smpower1v1-worker1 --ignore-daemonsets --delete-emptydir-data
+kubectl drain smpower1v1-worker2 --ignore-daemonsets --delete-emptydir-data
+kubectl drain smpower1v1-worker3 --ignore-daemonsets --delete-emptydir-data
+
+<span class="cmd-comment"># 재시작 후 (워커 노드별로 실행)</span>
+kubectl uncordon smpower1v1-worker1
+kubectl uncordon smpower1v1-worker2
+kubectl uncordon smpower1v1-worker3
+
+<span class="cmd-comment"># Error Pod 잔재 정리</span>
+kubectl get pods -n cp-portal | grep Error | awk '{print $1}' | xargs kubectl delete pod -n cp-portal</code></pre>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>미해결 이슈 (수업 시점 기준)</div>
+        <p>플로팅 IP({KUBERNETES_IP})가 ingress-nginx로 연결되지 않아 Keycloak(cp-portal 로그인) 접근이 되지 않는 문제가 남아 있었습니다. NHN Cloud L7 로드밸런서에 다음 리스너 설정이 필요합니다: 리스너 1 HTTP 80 → 워커 노드:31080, 리스너 2 HTTPS 443 → 워커 노드:31443.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>항목</th><th>주소</th></tr></thead>
+          <tbody>
+            <tr><td>MSA 게시판 포털</td><td><code>http://215.64.xx.xx:30001/user/login</code></td></tr>
+            <tr><td>Swagger (board)</td><td><code>http://215.64.xx.xx:30201/board/docs</code></td></tr>
+            <tr><td>Swagger (comment)</td><td><code>http://215.64.xx.xx:30301/comment/docs</code></td></tr>
+            <tr><td>Swagger (user)</td><td><code>http://215.64.xx.xx:30401/user/docs</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="color:var(--text-faint);font-size:0.9rem;">위 IP는 원본 노트에서도 마지막 두 자리가 마스킹된 상태(<code>215.64.xx.xx</code>)로 기록되어 있던 값을 그대로 옮긴 것입니다.</p>
+
+      <div class="summary">
+        <div class="box-head">실전 실습 자료 정리</div>
+        <p>이 절의 두 트러블슈팅(① hibernate-validator 버전 충돌, ② MySQL PVC 미설정)은 모두 Part Ⅰ이 이론적으로 강조한 원칙 — "설정은 코드와 분리해 관리한다"(12 Factor App, u1-5), "서비스는 무상태이고 상태는 외부 저장소가 갖는다"(u1-3) — 가 지켜지지 않았을 때 실제로 무슨 일이 벌어지는지 보여주는 실전 사례입니다. 교재의 정리된 절차만으로는 보이지 않는, 실제 수업 현장의 시행착오가 이 절의 핵심입니다.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="glossary">
+      <div class="unit-kicker">REFERENCE</div>
+      <h2>중요 용어 사전</h2>
+      <dl class="glossary cols-2">
+        <div><dt>MSA</dt><dd>MicroService Architecture — 기능을 독립 배포 가능한 작은 서비스로 쪼갠 아키텍처</dd></div>
+        <div><dt>API Gateway (Zuul)</dt><dd>여러 API 서버의 엔드포인트를 단일화해 라우팅·로드밸런싱하는 진입점(<code>edu-msa-zuul</code>, <code>msa-sample-gateway</code>)</dd></div>
+        <div><dt>Redis</dt><dd>세션값 등을 저장하는 인메모리 key-value 저장소</dd></div>
+        <div><dt>WAR (Web Application Archive)</dt><dd>자바 웹 애플리케이션을 배포하기 위한 패키지 파일</dd></div>
+        <div><dt>eGovFrame(전자정부표준프레임워크)</dt><dd>한국 공공 SW 개발 표준 프레임워크, Eclipse 기반 개발환경(eGovFrameDev) 제공</dd></div>
+        <div><dt>Docker Hub</dt><dd>도커에서 운영하는 도커 이미지 저장소(Repository) 서비스</dd></div>
+        <div><dt>Dockerfile</dt><dd>컨테이너 이미지를 어떻게 빌드할지 기술한 스크립트</dd></div>
+        <div><dt>NodePort</dt><dd>클러스터 외부에서 고정 포트로 서비스에 접근할 수 있게 하는 쿠버네티스 Service 타입</dd></div>
+        <div><dt>ConfigMap</dt><dd>설정값(키-값)을 컨테이너 코드와 분리해 저장·주입하는 쿠버네티스 리소스</dd></div>
+        <div><dt>Kube Config</dt><dd>특정 Kubernetes 클러스터에 접속하기 위한 인증·주소 정보 파일</dd></div>
+        <div><dt>K-PaaS</dt><dd>국내 오픈소스 기반 클라우드 플랫폼(Container Platform 등)을 제공하는 프로젝트(Korean PaaS)</dd></div>
+        <div><dt>Source Control(소스컨트롤)</dt><dd>Container Platform에 내장된 Git 저장소 관리 서비스</dd></div>
+        <div><dt>Pipeline(파이프라인)</dt><dd>빌드~정적분석~테스트~배포를 자동으로 연결해 실행하는 CI/CD 서비스</dd></div>
+        <div><dt>mirror clone</dt><dd><code>git clone/push --mirror</code> — 저장소의 모든 브랜치·태그·이력을 통째로 복제·이전하는 방식</dd></div>
+        <div><dt>Quality Gate(품질게이트)</dt><dd>정적분석 등으로 코드 품질 기준을 검사해 다음 단계 진행 여부를 결정하는 단계</dd></div>
+        <div><dt>Gradle</dt><dd>자바 계열 프로젝트의 빌드 자동화 도구</dd></div>
+        <div><dt>kubectl</dt><dd>Kubernetes 클러스터를 조작하는 커맨드라인 도구</dd></div>
+        <div><dt>Namespace</dt><dd>클러스터 내 리소스를 논리적으로 격리하는 단위</dd></div>
+        <div><dt>Deployment</dt><dd>지정한 수(<code>replicas</code>)의 Pod 복제본을 유지하고 장애 시 자동 복구하는 컨트롤러</dd></div>
+        <div><dt>Minikube</dt><dd>로컬 1노드 환경에서 Kubernetes를 실습할 수 있게 해주는 도구</dd></div>
+      </dl>
+    </section>
+
+    <section class="unit" id="wrap">
+      <div class="unit-kicker">WRAP-UP</div>
+      <h2>정리 & 다음 강의 연결</h2>
+      <div class="summary">
+        <div class="box-head">한 줄 정리</div>
+        <p>같은 MSA 앱 배포라는 목표를, <strong>kubectl 직접 조작 → 포털 GUI → 소스컨트롤+파이프라인 완전 자동화 → 다시 kubectl 기본기</strong> 순으로 반복하며, PaaS가 정확히 어떤 수작업을 대신 해주는지 체감했습니다. 위 <a href="#compare-table">비교표 A</a>를 다시 보며 Part Ⅰ·Ⅱ·Ⅲ의 차이를 최종 정리해 보세요.</p>
+      </div>
+      <p>다음 강의(<strong>8강 · K8S 이론</strong>)에서는 이번 실습 내내 GUI와 파이프라인 뒤에서 실제로 동작했던 <strong>Kubernetes 자체의 구조와 원리</strong>(Pod, Deployment, Service 등 오브젝트가 클러스터 내부에서 어떻게 관리되는지)를 이론적으로 다룹니다.</p>
+    </section>
+
+    <nav class="lecture-nav">
+      <a href="06_PaaS_설치.html"><span class="dir">이전</span>6강 · PaaS 설치</a>
+      <a class="next" href="08_K8S_이론.html"><span class="dir">다음</span>8강 · K8S 이론</a>
+    </nav>
+  </main>
+</div>
+<script src="assets/_shared/lecture.js"></script>
+</body>
+</html>

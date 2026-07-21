@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>새싹(SeSAC) 클라우드 네이티브 교육과정 — 전체 커리큘럼</title>
+<link rel="stylesheet" href="assets/_shared/lecture.css">
+<style>
+  .layout { grid-template-columns: 1fr; }
+  main { max-width: 980px; margin: 0 auto; padding: 0 32px 100px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 20px 0 8px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 22px; text-decoration: none; color: var(--text); display: flex; flex-direction: column; gap: 8px;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card .num { font-size: .78rem; font-weight: 800; color: var(--accent); letter-spacing: .04em; }
+  .card h3 { margin: 0; font-size: 1.08rem; }
+  .card p { margin: 0; color: var(--text-dim); font-size: .88rem; line-height: 1.55; }
+  .card .tags { margin-top: auto; }
+  .flow-diagram {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px 26px; margin: 18px 0 28px; overflow-x: auto;
+  }
+  .flow-diagram ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .flow-diagram li { background: var(--accent-dim); color: var(--accent); font-weight: 700; font-size: .85rem; padding: 8px 14px; border-radius: 20px; white-space: nowrap; }
+  .flow-diagram .arrow { color: var(--text-faint); font-weight: 400; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <main>
+    <header class="hero">
+      <span class="hero-badge">2026 · SeSAC</span>
+      <h1>클라우드 네이티브 교육과정<br>전체 커리큘럼</h1>
+      <p class="subtitle">클라우드 개념 → 인프라 코드화 → K8s 클러스터 설치 → 그 위에 PaaS 플랫폼·MSA 애플리케이션 배포까지, 9개 강의가 하나의 실습 파이프라인으로 이어집니다.</p>
+      <div class="meta">
+        <span>원본: PDF 9종 (INNO 클라우드네이티브교육과정)</span>
+        <span>정리: 각 강의는 왜 · 어디에 · 어떻게 구조로 재구성</span>
+      </div>
+    </header>
+
+    <div class="flow-diagram">
+      <ol>
+        <li>1강 개념 이해</li><span class="arrow">→</span>
+        <li>2강 Container 기술</li><span class="arrow">→</span>
+        <li>3강 IaaS 이론</li><span class="arrow">→</span>
+        <li>4강 IaaS 구축</li><span class="arrow">→</span>
+        <li>5강 K8S 클러스터 설치</li><span class="arrow">→</span>
+        <li>6강 PaaS 설치</li><span class="arrow">→</span>
+        <li>7강 PaaS 실습</li><span class="arrow">→</span>
+        <li>8강 K8S 이론</li><span class="arrow">→</span>
+        <li>9강 K8S 실습</li>
+      </ol>
+    </div>
+
+    <p style="color:var(--text-dim);">최종 목표는 NHN Cloud(OpenStack 기반) 위에 Control Plane 1대 + Worker 3대 + NFS 1대로 K8s 클러스터를 직접 설치하고, 그 위에 K-PaaS 컨테이너 플랫폼과 MSA 게시판 애플리케이션까지 배포·운영해보는 것입니다.</p>
+
+    <div class="cards">
+      <a class="card" href="01_클라우드네이티브_이론.html">
+        <span class="num">1강 · 이론</span>
+        <h3>클라우드 네이티브 이론</h3>
+        <p>클라우드 정의·5대 특징, IaaS/PaaS/SaaS, 12 Factor App, MSA, 컨테이너, DevOps, CI/CD — 왜 클라우드 네이티브 방식으로 애플리케이션을 만드는지의 기초</p>
+      </a>
+      <a class="card" href="02_Container_기술.html">
+        <span class="num">2강 · 이론</span>
+        <h3>Container 기술</h3>
+        <p>Docker, Dockerfile, Docker Compose — 이미지 빌드·태그·푸시 실습으로 컨테이너가 실제로 어떻게 만들어지는지</p>
+      </a>
+      <a class="card" href="03_IaaS_이론.html">
+        <span class="num">3강 · 이론</span>
+        <h3>IaaS 이론</h3>
+        <p>K-PaaS 오픈소스 구성요소, NHN Cloud(OpenStack 기반) 네트워크/컴퓨트 리소스 개념</p>
+      </a>
+      <a class="card" href="04_IaaS_구축.html">
+        <span class="num">4강 · 실습</span>
+        <h3>IaaS 구축</h3>
+        <p>NHN Cloud 콘솔로 인스턴스 5대 구축 → Terraform으로 동일 인프라를 코드화(IaC)하는 실습</p>
+      </a>
+      <a class="card" href="05_K8S_클러스터_설치.html">
+        <span class="num">5강 · 실습</span>
+        <h3>K8S 클러스터 설치</h3>
+        <p>Kubespray 기반으로 K-PaaS 컨테이너 플랫폼 클러스터를 설치하는 7단계 절차</p>
+      </a>
+      <a class="card" href="06_PaaS_설치.html">
+        <span class="num">6강 · 실습</span>
+        <h3>PaaS 설치</h3>
+        <p>K8s 클러스터 위에 컨테이너 플랫폼 포털(Helm, Istio, Harbor, Rook-Ceph 등 부가 서비스)을 설치</p>
+      </a>
+      <a class="card" href="07_PaaS_실습.html">
+        <span class="num">7강 · 실습</span>
+        <h3>PaaS 실습</h3>
+        <p>회원가입·게시판·댓글 기능을 가진 MSA 게시판 애플리케이션(API Gateway + 3개 API 서비스)을 플랫폼에 배포</p>
+      </a>
+      <a class="card" href="08_K8S_이론.html">
+        <span class="num">8강 · 이론</span>
+        <h3>K8S 이론</h3>
+        <p>Kubernetes 정의·특징, 클러스터 구성요소(Master/Worker), 오브젝트 모델 — 지금까지 실습한 것의 원리</p>
+      </a>
+      <a class="card" href="09_K8S_실습.html">
+        <span class="num">9강 · 실습</span>
+        <h3>K8S 실습</h3>
+        <p>kubectl로 Node/Pod 등을 직접 다루는 운영 실습 — cordon/uncordon 등 클러스터 운영 명령어</p>
+      </a>
+    </div>
+
+    <hr class="div">
+
+    <div class="summary">
+      <div class="box-head">이 정리본에 대하여</div>
+      <p>각 강의 HTML은 원본 PDF의 슬라이드를 그대로 옮긴 것이 아니라, <strong>왜 배우는지 → 어디에 적용되는지 → 어떻게 동작/도출되는지</strong> 순서로 재구성한 학습용 교안입니다. 정확한 수치나 스크린샷이 필요할 때는 <code>drive-download-20260721T013605Z-1-001</code> 폴더의 원본 PDF를 참고하세요.</p>
+    </div>
+  </main>
+</div>
+</body>
+</html>

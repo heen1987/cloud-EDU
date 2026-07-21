@@ -1,0 +1,11 @@
+# 원본 PDF·zip·실습 원본 자료 (저작권 + 대용량 + 실제 자격증명 포함 — 절대 공개 저장소에 올리지 않음)
+drive-download-20260721T013605Z-1-001/
+drive-download-20260721T013605Z-1-001.zip
+
+# 세션/도구 관련 로컬 설정
+.claude/
+
+# PDF 추출 중간 산출물 (최종 HTML에는 이미 반영되어 있어 불필요, 원문 텍스트라 저작권 우려도 있음)
+assets/*/text.txt
+assets/*/manifest.json
+assets/*/outline.md

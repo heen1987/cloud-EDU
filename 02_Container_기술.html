@@ -1,0 +1,987 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2강 · Container 기술 — 새싹 클라우드 네이티브 교안</title>
+<link rel="stylesheet" href="assets/_shared/lecture.css">
+</head>
+<body>
+<div class="layout">
+
+  <aside class="toc">
+    <a class="toc-back" href="00_index.html">← 전체 커리큘럼</a>
+    <div class="toc-kicker">2강 · 실습 포함</div>
+    <div class="toc-title">Container 기술</div>
+    <nav>
+      <ul>
+        <li><a href="#part1">Ⅰ. 왜 컨테이너인가</a></li>
+        <li><a class="l2" href="#u1-1">01 · Container란 무엇인가</a></li>
+        <li><a class="l2" href="#u1-2">02 · VM vs Container</a></li>
+        <li><a class="l2" href="#u1-3">03 · Container의 10가지 특징</a></li>
+        <li><a class="l2" href="#u1-4">04 · Container Engine과 Runtime</a></li>
+        <li><a href="#part2">Ⅱ. Docker</a></li>
+        <li><a class="l2" href="#u2-1">01 · Docker란 무엇인가</a></li>
+        <li><a class="l2" href="#u2-2">02 · Dockerfile → Image → Container</a></li>
+        <li><a class="l2" href="#u2-3">03 · Dockerfile 작성</a></li>
+        <li><a class="l2" href="#u2-4">04 · Docker 설치</a></li>
+        <li><a class="l2" href="#u2-5">05 · Docker CLI</a></li>
+        <li><a href="#part3">Ⅲ. Docker Compose</a></li>
+        <li><a class="l2" href="#u3-1">01 · Docker Compose란 무엇인가</a></li>
+        <li><a class="l2" href="#u3-2">02 · Docker Compose CLI</a></li>
+        <li><a class="l2" href="#u3-3">03 · 실습 비교</a></li>
+        <li><a href="#part4">Ⅳ. Dockerfile 실습</a></li>
+        <li><a class="l2" href="#u4-1">실습1 · 단일 Dockerfile 빌드</a></li>
+        <li><a class="l2" href="#u4-2">실습2 · 다중 이미지 빌드</a></li>
+        <li><a href="#part5">Ⅴ. MSA 이미지 생성·배포 실습</a></li>
+        <li><a class="l2" href="#u5-1">01 · MSA 애플리케이션 아키텍처</a></li>
+        <li><a class="l2" href="#u5-2">02 · 실습 절차</a></li>
+        <li><a href="#lab-0708">실전 실습 자료 (2026-07-08 수업)</a></li>
+        <li><a href="#glossary">용어 사전</a></li>
+        <li><a href="#wrap">정리 & 다음 강의</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main>
+    <button class="toc-toggle">☰ 목차 열기</button>
+
+    <header class="hero">
+      <span class="hero-badge">2강 · 실습 포함</span>
+      <h1>Container 기술의 이해<br>— 컨테이너는 왜 가볍고, 어떻게 이미지로 만들어 배포하는가</h1>
+      <p class="subtitle">1강에서 "왜 컨테이너를 쓰는지"만 짚었다면, 이번 강의는 컨테이너가 VM과 무엇이 다르길래 가벼운지부터, Docker로 이미지를 실제로 만들고(Dockerfile → Image → Container), Docker Compose로 여러 컨테이너를 묶어 관리하고, 마지막엔 실제 MSA 애플리케이션 이미지를 빌드해 Docker Hub에 푸시하는 전 과정을 원리 수준에서 다룹니다.</p>
+      <div class="meta">
+        <span>원본: Container 기술.pdf (65p)</span>
+        <span>구성: Container 개념 → Docker → Docker Compose → Dockerfile 실습 → MSA 이미지 생성 실습</span>
+        <span>핵심 키워드: Docker · Dockerfile · Docker Compose · Docker Hub</span>
+      </div>
+    </header>
+
+    <div class="roadmap">
+      <h2>이 강의를 보는 순서</h2>
+      <ol>
+        <li><a href="#part1"><strong>왜 컨테이너인가</strong></a> — VM(Hypervisor) 방식과 비교해 컨테이너가 왜 가벼운지, Container Engine과 Runtime은 어떻게 역할을 나누는지</li>
+        <li><a href="#part2"><strong>Docker로 어떻게 이미지를 만드는가</strong></a> — Dockerfile을 Build하면 Image, Image를 Run하면 Container라는 흐름과 CLI</li>
+        <li><a href="#part3"><strong>여러 컨테이너는 어떻게 한 번에 관리하는가</strong></a> — Docker Compose로 docker run 반복을 하나의 yaml로 대체하기</li>
+        <li><a href="#part4"><strong>직접 만들어보기</strong></a> — Dockerfile 실습 1·2, 그리고 <a href="#part5">MSA 애플리케이션 이미지를 빌드해 Docker Hub에 푸시하는 실습</a></li>
+      </ol>
+    </div>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="part1">
+      <div class="unit-kicker">PART Ⅰ</div>
+      <h2>왜 컨테이너인가 — Container 기술의 이해</h2>
+      <p class="unit-lede"><span class="term" title="하나의 큰 애플리케이션을 여러 개의 작은 서비스로 잘게 나눠 만드는 구조(Microservices Architecture) — 1강 참고">MSA</span>로 애플리케이션을 잘게 쪼갤수록 배포해야 할 단위 수가 늘어납니다. 이 수많은 단위를 서버마다 똑같이, 빠르게 띄우려면 "<span class="term" title="물리적인 컴퓨터 자원 하나를 소프트웨어로 흉내 내어 여러 개인 것처럼 나눠 쓰는 기술">가상화</span>"를 더 가볍게 만들 방법이 필요했고, 그 답이 컨테이너입니다.</p>
+
+      <h3 id="u1-1">01 · Container란 무엇인가</h3>
+      <p><strong>컨테이너(Container)</strong>란 가상화된 운영체제 위에서 애플리케이션의 독립적인 실행에 필요한 파일(소스코드, 라이브러리 등)을 모은 패키지입니다. 애플리케이션의 코드를 관련 구성 파일, 라이브러리 및 앱 실행에 필요한 종속성과 함께 번들로 제공하는 SW 패키지이기도 합니다. <span style="color:var(--text-faint);font-size:0.88rem;">(출처: Google Cloud, Azure 공식 홈페이지)</span></p>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이런 패키지가 필요한가</div>
+        <p>1강에서 본 것처럼 MSA는 하나의 큰 애플리케이션을 사용자관리·주문관리·상품관리 같은 작은 서비스 수십~수백 개로 쪼갭니다. 이 각각을 서버에 배포할 때마다 "이 서비스가 어떤 언어 버전, 어떤 라이브러리, 어떤 설정으로 동작하는지"를 사람이 매번 맞춰주면 실수가 나기 쉽고 속도도 느립니다. 컨테이너는 실행에 필요한 모든 것(코드+라이브러리+설정)을 하나의 패키지로 묶어, "이 패키지만 있으면 어디서든 똑같이 동작한다"는 전제를 만듭니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디에 적용되는가</div>
+        <p>온프레미스 서버, 여러 퍼블릭 클라우드, 개발자의 노트북 등 실행 환경이 서로 다른 곳에서도 동일하게 동작해야 하는 모든 배포 상황 — 특히 뒤에서 다룰 <a href="#part5">MSA 애플리케이션(사용자/댓글/게시글 API 등)</a>처럼 서비스 단위가 많고 각 서비스의 실행 환경이 서로 다른 경우에 유리합니다.</p>
+      </div>
+
+      <h3 id="u1-2">02 · VM vs Container — 무엇이 다르길래 가벼운가</h3>
+      <p>컨테이너 이전에도 "가상화"는 있었습니다 — Virtual Machine(VM) 방식입니다. 둘의 차이는 "OS를 어디까지 통째로 복제하느냐"에 있습니다.</p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0 24px;align-items:start;">
+        <div class="box" style="background:var(--surface);">
+          <div class="box-head" style="justify-content:center;color:var(--text);">Virtual Machine</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+              <div style="background:var(--surface-alt);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">APP A</div>
+              <div style="background:var(--surface-alt);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">APP B</div>
+              <div style="background:var(--surface-alt);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">APP C</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+              <div style="background:var(--surface-alt);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">Bin/Libs</div>
+              <div style="background:var(--surface-alt);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">Bin/Libs</div>
+              <div style="background:var(--surface-alt);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">Bin/Libs</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+              <div style="background:var(--where-bg);border:1px solid var(--where-border);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">Guest OS</div>
+              <div style="background:var(--where-bg);border:1px solid var(--where-border);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">Guest OS</div>
+              <div style="background:var(--where-bg);border:1px solid var(--where-border);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">Guest OS</div>
+            </div>
+            <div style="background:var(--accent-dim);color:var(--accent);border-radius:8px;padding:8px;text-align:center;font-size:0.86rem;font-weight:700;">Hypervisor</div>
+            <div style="background:var(--surface-alt);border-radius:8px;padding:8px;text-align:center;font-size:0.86rem;">Hardware</div>
+          </div>
+        </div>
+        <div class="box" style="background:var(--surface);">
+          <div class="box-head" style="justify-content:center;color:var(--text);">Container</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+              <div style="background:var(--surface-alt);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">APP A</div>
+              <div style="background:var(--surface-alt);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">APP B</div>
+              <div style="background:var(--surface-alt);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">APP C</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+              <div style="background:var(--surface-alt);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">Bin/Libs</div>
+              <div style="background:var(--surface-alt);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">Bin/Libs</div>
+              <div style="background:var(--surface-alt);border-radius:8px;padding:6px 4px;text-align:center;font-size:0.78rem;">Bin/Libs</div>
+            </div>
+            <div style="background:var(--how-bg);color:var(--how);border:1px solid var(--how-border);border-radius:8px;padding:8px;text-align:center;font-size:0.86rem;font-weight:700;">Container Engine</div>
+            <div style="background:var(--surface-alt);border-radius:8px;padding:8px;text-align:center;font-size:0.86rem;">Host OS (Linux)</div>
+            <div style="background:var(--surface-alt);border-radius:8px;padding:8px;text-align:center;font-size:0.86rem;">Hardware</div>
+          </div>
+        </div>
+      </div>
+      <p style="margin-top:-14px;color:var(--text-faint);font-size:0.84rem;">※ Container 쪽에는 VM의 "Guest OS" 줄이 없고, 대신 Host OS 위에서 바로 Container Engine이 앱들을 격리 실행합니다 — 이 한 줄 차이가 컨테이너를 가볍게 만드는 핵심입니다.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>구분</th><th>Virtual Machine</th><th>Container</th></tr></thead>
+          <tbody>
+            <tr><td>격리 단위</td><td>Guest OS 단위로 완전히 분리</td><td>프로세스(Bin/Libs + APP) 단위로 격리</td></tr>
+            <tr><td>OS 구성</td><td>Host OS 위 Hypervisor, 그 위에 VM마다 별도의 Guest OS</td><td>Host OS(Linux) 위 Container Engine이 바로 여러 APP을 격리 실행 (Guest OS 불필요)</td></tr>
+            <tr><td>실행 매개체</td><td>Hypervisor</td><td>Container Engine</td></tr>
+            <tr><td>무게·속도</td><td>Guest OS 전체를 부팅해야 해서 무겁고 느림</td><td>Host 커널을 공유해 가볍고 빠르게 시작</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>어떻게 이렇게 가벼워지는가</div>
+        <p>VM은 애플리케이션 하나를 실행하는 데도 완전한 OS(Guest OS) 한 벌을 통째로 올려야 합니다. Container는 Host OS의 <span class="term" title="운영체제의 가장 핵심부로, 하드웨어와 소프트웨어를 직접 연결해주는 부분">커널</span>을 그대로 공유하고, 그 위에서 Container Engine이 앱마다 필요한 Bin/Libs + APP만 프로세스 수준으로 격리합니다. "OS를 새로 부팅하지 않는다"는 것이 핵심이며, 이 덕분에 이미지 생성·배포가 기민해지고 여러 컨테이너를 고밀도로 띄울 수 있습니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>VM은 앱 하나를 실행하려고 매번 아파트 한 채(운영체제 전체)를 새로 지어 올리는 것과 비슷합니다. Container는 이미 지어진 건물(Host OS) 한 채 안에서 방만 나눠 쓰는 것과 같습니다 — 건물을 새로 짓는 공사(OS 부팅)가 필요 없으니, 그만큼 빠르고 가볍게 방(컨테이너)을 늘릴 수 있는 것입니다.</p>
+      </div>
+
+      <h3 id="u1-3">03 · Container의 10가지 특징</h3>
+      <p>컨테이너가 가벼운 격리 방식이라는 것은 실무에서 아래 10가지 이점으로 이어집니다. <span style="color:var(--text-faint);font-size:0.88rem;">(출처: 쿠버네티스 공식 문서)</span></p>
+
+      <dl class="glossary cols-2">
+        <div><dt>1. 기민한 애플리케이션 생성과 배포</dt><dd>쉽고 효율적인 컨테이너 이미지 생성으로 애플리케이션을 빠르게 생성·배포할 수 있음</dd></div>
+        <div><dt>2. 지속적인 개발·통합·배포</dt><dd>안정적, 주기적으로 이미지를 빌드·배포할 수 있어 CI/CD가 가능해짐</dd></div>
+        <div><dt>3. 개발과 운영의 관심사 분리</dt><dd>빌드/릴리즈 시점에 이미지를 만들기 때문에 개발과 운영의 역할이 분리됨</dd></div>
+        <div><dt>4. 가시성(Observability)</dt><dd>애플리케이션의 헬스와 그 밖의 시그널을 볼 수 있어 관측 가능성이 높음</dd></div>
+        <div><dt>5. 환경 간 일관성</dt><dd>노트북과 클라우드에서 모두 동일하게 구동되어 개발·테스트·운영 환경의 차이가 없어짐</dd></div>
+        <div><dt>6. 클라우드·OS 배포판 간 이식성</dt><dd>주요 퍼블릭 클라우드 어디에서든 구동되어 이식성이 높음</dd></div>
+        <div><dt>7. 애플리케이션 중심 관리</dt><dd>논리적 리소스를 사용하는 OS 중심으로 추상화 수준이 높아져 애플리케이션 자체를 중심에 두고 관리 가능</dd></div>
+        <div><dt>8. 느슨하게 묶인 분산·유연한 배포</dt><dd>마이크로서비스 형태로 애플리케이션을 배포·관리하기 쉬움</dd></div>
+        <div><dt>9. 리소스 격리를 통한 예측 가능한 성능</dt><dd>리소스가 격리되어 있어 애플리케이션 성능을 예측할 수 있음</dd></div>
+        <div><dt>10. 고효율·고집적 리소스 사용</dt><dd>동일 자원에 더 많은 워크로드를 올릴 수 있음</dd></div>
+      </dl>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디에 적용되는가</div>
+        <p>이 특징들은 1강에서 배운 "클라우드 네이티브가 실제로 주는 이점(빠른 배포, 롤링 업데이트, 스케일아웃, 이식성)"이 실제로 어떤 하부 기술 덕분에 가능한지를 설명합니다 — 즉 컨테이너의 특징이 클라우드 네이티브 애플리케이션의 특징으로 그대로 이어집니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>위 10가지를 한 문장으로 줄이면: 컨테이너로 배포하면 "더 빠르게 배포되고, 내 노트북에서 되던 게 서버에서도 똑같이 되고, 같은 장비에 더 많은 서비스를 올릴 수 있다"는 뜻입니다. 즉 개발자 입장의 편의(1~4번)와 운영 입장의 효율(5~10번)을 동시에 얻는 셈입니다.</p>
+      </div>
+
+      <h3 id="u1-4">04 · Container Engine과 Container Runtime</h3>
+      <p>컨테이너를 실제로 띄우는 과정은 역할이 다른 두 소프트웨어가 나눠서 처리합니다. <span style="color:var(--text-faint);font-size:0.88rem;">(출처: Red Hat 블로그)</span></p>
+      <ul>
+        <li><strong>Container Engine</strong> — 컨테이너를 관리하기 위한 <span class="term" title="프로그램끼리 서로 요청을 주고받을 수 있게 정해둔 접속 규격(Application Programming Interface)">API</span>나 <span class="term" title="화면(마우스클릭) 대신 글자로 된 명령어를 입력해 프로그램을 다루는 방식(Command Line Interface)">CLI</span> 도구를 제공하는 소프트웨어. 예: 도커 엔진(docker-ce), Red Hat의 Podman, 로켓컴퍼니의 rkt.</li>
+        <li><strong>Container Runtime</strong> — 루트 파일시스템과 메타데이터(spec file)를 받아 실제로 컨테이너를 실행하는 도구. 가장 일반적으로 쓰이는 런타임은 OCI(Open Container Initiative)를 준수하는 <strong>runC</strong>이며, containerd·cri-o도 결국 runC에 의존합니다.</li>
+      </ul>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>어떻게 컨테이너가 실제로 뜨는가</div>
+        <p>사용자가 명령을 내리면 ① Container Engine이 사용자 입력을 받고 → ② 컨테이너 이미지를 <span class="term" title="이미지를 올려두고 내려받을 수 있는 온라인 저장소(창고)">레지스트리</span>에서 내려받고(pull) → ③ 컨테이너 실행 방법을 명시한 메타데이터(spec file)를 만든 다음 → ④ 이 정보를 Container Runtime(runC 등)에 전달하고 → ⑤ Runtime이 실제로 격리된 프로세스를 실행합니다. 즉 Engine은 "사용자와의 접점"이고 Runtime은 "실제 실행 담당자"입니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>Engine은 손님의 주문을 받는 "홀 서빙 직원", Runtime은 실제로 조리하는 "주방장"에 비유할 수 있습니다. 사용자는 Engine(직원)에게 말만 걸면 되고, 이미지를 받아와 실제로 컨테이너를 띄우는 손발 노동은 Runtime(주방장)이 담당합니다.</p>
+      </div>
+
+      <div class="summary">
+        <div class="box-head">핵심 정리</div>
+        <p>컨테이너가 VM보다 가벼운 이유(OS를 새로 부팅하지 않음)와, 그 가벼움이 Engine→Runtime의 역할 분담으로 실제 실행되는 원리를 봤습니다. 다음 절부터는 이 컨테이너를 "관리·운영"하는 대표 도구인 <a href="#part2"><strong>Docker</strong></a>를 다룹니다.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="part2">
+      <div class="unit-kicker">PART Ⅱ</div>
+      <h2>Docker — 컨테이너를 만들고 다루는 도구</h2>
+      <p class="unit-lede">컨테이너가 "무엇을 실행할지"에 대한 개념이라면, Docker는 그 컨테이너를 "어떻게 만들고 실행할지" 실무에서 다루게 해주는 도구입니다.</p>
+
+      <h3 id="u2-1">01 · Docker란 무엇인가</h3>
+      <p><strong>Docker</strong>란 애플리케이션과 실행 환경을 포함한 컨테이너를 관리 및 운영하는 오픈소스 가상화 플랫폼입니다. <span style="color:var(--text-faint);font-size:0.88rem;">(출처: 도커 공식 문서)</span></p>
+      <p>
+        <span class="tag">빠른 실행 속도</span>
+        <span class="tag">손쉬운 배포</span>
+        <span class="tag">가벼운 용량</span>
+        <span class="tag">애플리케이션의 독립성</span>
+        <span class="tag">높은 보안성 보장</span>
+        <span class="tag">낮은 오버헤드</span>
+        <span class="tag">이미지 생성 및 공유</span>
+      </p>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 Docker가 대표 도구가 되었는가</div>
+        <p>Container Engine 역할을 하는 소프트웨어가 여럿(Podman, rkt 등) 있지만, Docker는 이미지 생성부터 실행, 공유(<span class="term" title="도커가 운영하는 이미지 저장소 서비스 — 누구나 이미지를 올리고 받을 수 있는 온라인 창고">Docker Hub</span>)까지 하나의 CLI로 일관되게 제공해 "컨테이너를 만들고 배포하는 표준 워크플로우"로 자리잡았습니다.</p>
+      </div>
+
+      <h3 id="u2-2">02 · Dockerfile → Image → Container 흐름</h3>
+      <p>Docker에서 컨테이너가 만들어지는 흐름은 다음 세 단계입니다. <span style="color:var(--text-faint);font-size:0.88rem;">(출처: JFrog 블로그 "A Beginner's Guide to Understanding and Building Docker Images")</span></p>
+
+      <pre><code>Dockerfile  --(Build)-->  Docker Image  --(Run)-->  Docker Container</code></pre>
+
+      <ul>
+        <li><strong>Dockerfile</strong> — 도커 이미지를 생성하기 위한 설정 파일이며, 다양한 도커파일 명령어로 작성함.</li>
+        <li><strong>Docker Image</strong> — 컨테이너 실행에 필요한 파일과 설정값 등을 포함하며, Dockerfile을 <strong>Build</strong>하여 생성.</li>
+        <li><strong>Docker Container</strong> — 격리된 공간에서 애플리케이션을 동작시킨 상태이며, Docker Image를 <strong>Run</strong>하여 실행.</li>
+      </ul>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>어떻게 이 3단계가 이어지는가</div>
+        <p>Dockerfile은 "레시피(설계도)", Image는 그 레시피대로 만들어진 "완성품 스냅샷", Container는 그 스냅샷을 실제로 켜서 동작시킨 "실행 중인 인스턴스"에 비유할 수 있습니다. 같은 이미지에서 여러 컨테이너를 동시에 run할 수 있다는 점이 핵심 — 레시피(Dockerfile)와 스냅샷(Image)은 한 번만 만들고, 실행(Container)은 필요한 만큼 반복할 수 있습니다.</p>
+      </div>
+
+      <h3 id="u2-3">03 · Dockerfile 작성 — 명령어와 실제 예시</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>명령어</th><th>설명</th></tr></thead>
+          <tbody>
+            <tr><td><code>FROM</code></td><td>컨테이너 기반이 되는 베이스 이미지 지정</td></tr>
+            <tr><td><code>WORKDIR</code></td><td>명령을 실행할 작업 디렉토리 설정 (bash의 <code>cd</code>와 같은 기능)</td></tr>
+            <tr><td><code>COPY</code></td><td>컨테이너 빌드 시 외부 파일을 컨테이너 내부로 복사</td></tr>
+            <tr><td><code>RUN</code></td><td>베이스 이미지에서 빌드 시 실행할 명령</td></tr>
+            <tr><td><code>ARG</code></td><td>빌드 시 사용할 변수값 설정</td></tr>
+            <tr><td><code>EXPOSE</code></td><td>외부에 노출시킬 포트 번호</td></tr>
+            <tr><td><code>ENTRYPOINT</code></td><td>컨테이너 실행 시 수행되는 명령어를 지정(프로파일 값 변경 등에 사용)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>이 코드가 하는 일을 한 줄로 요약하면: 톰캣(웹서버) 베이스 이미지 위에 설정 파일과 war 파일을 복사해 넣고, 28082 포트를 열어주는 Dockerfile입니다.</p>
+      <pre><code><span class="cmd-comment">FROM tomcat:9-jre8-alpine        # 컨테이너 기반이 되는 베이스 이미지</span>
+FROM tomcat:9-jre8-alpine
+WORKDIR /usr/local/tomcat        <span class="cmd-comment"># 명령을 실행할 작업 디렉토리 설정</span>
+COPY server.xml ./conf           <span class="cmd-comment"># 컨테이너 빌드 시 컨테이너로 파일 복사</span>
+RUN rm -rf ./webapps/*           <span class="cmd-comment"># 베이스 이미지에서 실행할 명령</span>
+ARG JAR_FILE=*.war               <span class="cmd-comment"># 파일에 사용할 변수값 설정</span>
+COPY ${JAR_FILE} ./webapps/edu-msa-board-1.0.0.war
+EXPOSE 28082                     <span class="cmd-comment"># 외부에 노출시킬 포트 번호</span></code></pre>
+
+      <p style="margin-top:-10px;color:var(--text-faint);font-size:0.88rem;">※ 원본 슬라이드는 이 Dockerfile을 3장(FROM/WORKDIR/COPY → RUN/ARG/EXPOSE → ENTRYPOINT)에 걸쳐 한 줄씩 설명합니다. ENTRYPOINT는 "컨테이너 실행 시 수행할 명령을 지정하며 프로파일 값을 바꾸는 용도로 쓰인다"는 원칙만 다룹니다.</p>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>Dockerfile은 요리 레시피 카드라고 생각하면 됩니다. <code>FROM</code>은 "어떤 베이스 재료로 시작할지", <code>WORKDIR</code>은 "어느 작업대에서 작업할지", <code>COPY</code>는 "재료를 어디서 가져와 넣을지", <code>RUN</code>은 "무엇을 실행해둘지", <code>EXPOSE</code>는 "완성된 결과물을 어느 창구로 내보낼지"를 한 줄씩 적어두는 것입니다. 이 레시피대로 한 번 "빌드"하면 언제 다시 만들어도 항상 같은 결과물(이미지)이 나옵니다.</p>
+      </div>
+
+      <h3 id="u2-4">04 · Docker 설치 (Ubuntu 기준)</h3>
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디에 설치하는가</div>
+        <p>실습은 Ubuntu 서버 환경을 기준으로 진행합니다. (공식 설치 가이드: <a href="https://docs.docker.com/engine/install/ubuntu/" target="_blank" rel="noopener">docs.docker.com/engine/install/ubuntu</a>)</p>
+      </div>
+
+      <p>이 코드가 하는 일을 한 줄로 요약하면: 도커 설치 패키지가 진짜인지 확인하는 데 쓸 서명 키(GPG)를 받아 저장해두는 준비 단계입니다.</p>
+      <pre><code><span class="cmd-comment"># Add Docker's official GPG key:</span>
+$ sudo apt update
+$ sudo apt install ca-certificates curl
+$ sudo install -m 0755 -d /etc/apt/keyrings
+$ sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+$ sudo chmod a+r /etc/apt/keyrings/docker.asc</code></pre>
+
+      <p>이 코드가 하는 일을 한 줄로 요약하면: 앞서 받은 키를 이용해, 우분투가 "도커 공식 배포처"를 신뢰하도록 저장소 주소를 등록하는 단계입니다.</p>
+      <pre><code><span class="cmd-comment"># Add the repository to Apt sources:</span>
+$ sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+$ sudo apt update</code></pre>
+
+      <h3 id="u2-5">05 · Docker CLI — 명령어와 실습</h3>
+      <p>Docker 명령은 <code>docker [options] command</code> 형태를 기본으로 하며, 대부분 추가 권한 없이 일반 사용자로 실행 가능합니다.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>명령어</th><th>설명</th></tr></thead>
+          <tbody>
+            <tr><td><code>docker version</code></td><td>버전 정보 표시</td></tr>
+            <tr><td><code>docker login</code> / <code>docker logout</code></td><td>컨테이너 레지스트리 로그인/로그아웃</td></tr>
+            <tr><td><code>docker build [options] [context]</code></td><td>컨테이너 파일을 사용해 이미지 빌드</td></tr>
+            <tr><td><code>docker tag image[:tag] target[:tag]</code></td><td>로컬 이미지에 새로운 이름 추가</td></tr>
+            <tr><td><code>docker pull [options] source</code></td><td>레지스트리에서 이미지 가져오기</td></tr>
+            <tr><td><code>docker push [options] image [dest]</code></td><td>이미지를 레지스트리로 전송</td></tr>
+            <tr><td><code>docker run [options] image [cmd]</code></td><td>이미지로 새 컨테이너 실행</td></tr>
+            <tr><td><code>docker exec [options] container [cmd]</code></td><td>실행 중 컨테이너에서 명령 실행</td></tr>
+            <tr><td><code>docker stop container</code></td><td>실행 중인 컨테이너 정상 중지</td></tr>
+            <tr><td><code>docker kill container</code></td><td>실행 중인 컨테이너 즉시 종료</td></tr>
+            <tr><td><code>docker ps [-a] [-s]</code></td><td>컨테이너 목록·정보 출력</td></tr>
+            <tr><td><code>docker rm container</code></td><td>컨테이너 삭제</td></tr>
+            <tr><td><code>docker images</code></td><td>로컬 이미지 목록</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>옵션</th><th>설명</th></tr></thead>
+          <tbody>
+            <tr><td><code>-d</code></td><td>detached(백그라운드) 모드 실행</td></tr>
+            <tr><td><code>-it</code></td><td>대화형 터미널 유지(컨테이너를 종료하지 않고 계속 사용)</td></tr>
+            <tr><td><code>--name</code></td><td>컨테이너 이름 부여</td></tr>
+            <tr><td><code>-e</code></td><td>환경변수 설정</td></tr>
+            <tr><td><code>-p</code></td><td>호스트:컨테이너 포트 매핑(포트포워딩)</td></tr>
+            <tr><td><code>--rm</code></td><td>종료 시 관련 리소스 자동 제거(일회성 실행에 자주 사용)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>자주 쓰는 옵션 세 가지만 쉽게 풀면: <code>-d</code>는 "실행해두고 터미널은 계속 내가 쓰게 뒤에서 돌려라"(백그라운드), <code>-it</code>는 "컨테이너 안에 들어가서 직접 명령을 치겠다"(대화형 접속), <code>--rm</code>은 "한 번 테스트해보고 끝나면 자동으로 치워달라"는 뜻입니다. 아래 실습에서 이 옵션들을 하나씩 켜보며 차이를 직접 확인합니다.</p>
+      </div>
+
+      <ol class="steps">
+        <li>
+          <h4>실습) run 명령어</h4>
+          도커 환경이 정상 동작하는지 <code>hello-world</code> 이미지로 확인합니다.
+          <pre><code>$ docker run hello-world</code></pre>
+          출력 요약: <code>Hello from Docker! This message shows that your installation appears to be working correctly.</code> → Docker client가 <span class="term" title="화면에 보이지 않고 항상 백그라운드에서 대기하며 요청을 처리하는 프로그램">daemon</span>에 접속 → daemon이 Docker Hub에서 hello-world 이미지를 pull → 새 컨테이너 생성·실행 → 출력을 클라이언트 터미널로 스트리밍.
+        </li>
+        <li>
+          <h4>실습) -d 옵션</h4>
+          detached 모드로 실행하면 실행 직후에도 터미널을 계속 사용할 수 있습니다.
+          <pre><code>$ docker run -d python:3.8-alpine python -m http.server</code></pre>
+        </li>
+        <li>
+          <h4>실습) -it 옵션</h4>
+          컨테이너를 종료하지 않은 채로 터미널을 계속 사용합니다(파이썬 인터랙티브 쉘 진입).
+          <pre><code>$ docker run -it python:3.8-alpine</code></pre>
+        </li>
+        <li>
+          <h4>실습) --name 옵션</h4>
+          컨테이너에 이름을 부여합니다.
+          <pre><code>$ docker run -d --name my-server python:3.8-alpine python -m http.server
+$ docker ps
+<span class="cmd-comment"># NAMES 컬럼에 my-server 확인</span></code></pre>
+        </li>
+        <li>
+          <h4>실습) -e 옵션</h4>
+          컨테이너 환경변수를 설정합니다.
+          <pre><code>$ docker run -e FOO=bar python:3.8-alpine env
+<span class="cmd-comment"># 출력에 FOO=bar 포함됨</span></code></pre>
+        </li>
+        <li>
+          <h4>실습) -p 옵션</h4>
+          호스트 포트와 컨테이너 포트를 연결합니다(포트포워딩).
+          <pre><code>$ docker run -d -p 80:8000 python:3.8-alpine python -m http.server
+<span class="cmd-comment"># docker ps PORTS 컬럼에 0.0.0.0:80->8000/tcp 확인</span></code></pre>
+        </li>
+        <li>
+          <h4>실습) --rm 옵션</h4>
+          종료 시 컨테이너와 관련 리소스를 자동 제거합니다(일회성 실행).
+          <pre><code>$ docker run --rm -it wernight/funbox nyancat</code></pre>
+        </li>
+      </ol>
+
+      <div class="summary">
+        <div class="box-head">핵심 정리</div>
+        <p>Docker CLI 하나로 이미지 빌드(<code>build</code>)·배포(<code>push</code>/<code>pull</code>)·실행(<code>run</code>)·운영(<code>ps</code>/<code>stop</code>/<code>rm</code>)까지 전 주기를 다룰 수 있습니다. 다음 절에서는 이 컨테이너가 여러 개로 늘어났을 때(예: DB + 웹서버) 이를 하나씩 <code>docker run</code> 하는 대신 한 번에 관리하는 <a href="#part3"><strong>Docker Compose</strong></a>를 다룹니다.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="part3">
+      <div class="unit-kicker">PART Ⅲ</div>
+      <h2>Docker Compose — 여러 컨테이너를 하나의 서비스로</h2>
+      <p class="unit-lede">실제 서비스는 컨테이너 하나로 끝나지 않습니다 — 웹서버 + DB처럼 여러 컨테이너가 함께 떠야 하나의 서비스가 완성됩니다. 이걸 매번 <code>docker run</code>으로 하나씩 실행하는 대신 선언적으로 관리하는 도구가 Docker Compose입니다.</p>
+
+      <h3 id="u3-1">01 · Docker Compose란 무엇인가</h3>
+      <p><strong>Docker Compose</strong>란 단일 서버에서 여러 개의 컨테이너를 하나의 서비스로 정의해, 컨테이너의 묶음으로 관리할 수 있는 작업 환경을 제공하는 관리 도구입니다.</p>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 필요한가</div>
+        <p>컨테이너 여러 개를 각각 <code>docker run</code>으로 실행하려면 볼륨·환경변수·포트 옵션을 컨테이너마다 길게 반복 입력해야 하고, 서로 다른 컨테이너를 하나의 서비스로 묶어 관리하기도 어렵습니다. Docker Compose는 이 모든 컨테이너의 정의를 <code>docker-compose.yml</code> 파일 하나에 선언해두고, 명령 한 번으로 전체를 배포·종료·재시작할 수 있게 합니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>TV·에어컨·조명을 리모컨마다 따로 켜는 대신, 외출 모드 버튼 하나로 한 번에 다 켜고 끄는 것과 비슷합니다. 컨테이너를 하나씩 <code>docker run</code>으로 켜는 대신, "이 서비스들을 이렇게 묶어서 띄워라"라고 <code>docker-compose.yml</code> 파일 한 장에 미리 적어두면, 그 다음부터는 명령 한 번(<code>docker compose up</code>)으로 전체가 한꺼번에 켜집니다.</p>
+      </div>
+
+      <h3 id="u3-2">02 · Docker Compose CLI</h3>
+      <p>기본 형태는 <code>docker compose [options] command</code>입니다.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>명령어</th><th>설명</th></tr></thead>
+          <tbody>
+            <tr><td><code>docker compose up [SERVICE...]</code></td><td>파일에 정의된 컨테이너 서비스 배포</td></tr>
+            <tr><td><code>docker compose down [SERVICE...]</code></td><td>실행 중인 Compose 종료 및 초기화(네트워크 포함 제거)</td></tr>
+            <tr><td><code>docker compose stop</code></td><td>실행 중인 컨테이너 종료(관련 네트워크·데이터는 유지)</td></tr>
+            <tr><td><code>docker compose start</code></td><td>중지 상태인 컨테이너 다시 시작</td></tr>
+            <tr><td><code>docker compose restart</code></td><td>컨테이너들을 중지 후 다시 시작</td></tr>
+            <tr><td><code>docker compose ps</code></td><td>컨테이너 목록 및 실행 상태 확인</td></tr>
+            <tr><td><code>docker compose logs</code></td><td>컨테이너 로그 확인</td></tr>
+            <tr><td><code>docker compose build</code></td><td>이미지 빌드</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="u3-3">03 · 실습 비교 — docker run 반복 vs docker-compose.yml 한 번</h3>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>Before — mysql·nginx를 각각 docker run</div>
+        <p>mysql 컨테이너와 nginx 컨테이너를 각각 <code>docker run</code>으로 띄우면 다음처럼 옵션이 길어집니다.</p>
+        <pre><code>$ docker run -v mysql-data:/var/lib/mysql -e MYSQL_RANDOM_ROOT_PASSWORD=true \
+  -e MYSQL_DATABASE=wordpress -e MYSQL_USER=wordpress \
+  -e MYSQL_PASSWORD=awesome-wordpress-password mysql:8.0
+
+$ docker run -p 80:80 -v /var/run/docker.sock:/tmp/docker.sock:ro \
+  --restart always --log-opt max-size=1g nginx</code></pre>
+      </div>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>After — docker-compose.yaml 하나로 합치기</div>
+        <p>이 코드가 하는 일을 한 줄로 요약하면: 위 두 개의 <code>docker run</code> 명령을 하나의 파일로 합쳐, mysql과 nginx 컨테이너를 <code>docker compose up</code> 한 번으로 같이 띄우도록 정의한 것입니다.</p>
+        <pre><code>name: mysql_nginx_service                      <span class="cmd-comment"># Project 이름</span>
+services:                                       <span class="cmd-comment"># 서비스 정의: 배포할 컨테이너를 정의</span>
+    mysql:                                      <span class="cmd-comment"># MySQL 데이터베이스 컨테이너 속성 정의</span>
+        volumes:
+            - mysql-data:/var/lib/mysql         <span class="cmd-comment"># mysql-data 볼륨을 MySQL 데이터 디렉터리에 마운트</span>
+        environment:                            <span class="cmd-comment"># MySQL 환경변수</span>
+            - MYSQL_RANDOM_ROOT_PASSWORD=true   <span class="cmd-comment"># root 계정 비밀번호 자동 생성</span>
+            - MYSQL_DATABASE=wordpress          <span class="cmd-comment"># 컨테이너 시작 시 생성할 데이터베이스 이름</span>
+            - MYSQL_USER=wordpress               <span class="cmd-comment"># 생성할 일반 사용자 계정</span>
+            - MYSQL_PASSWORD=awesome-wordpress-password  <span class="cmd-comment"># 위 사용자의 비밀번호</span>
+        image: mysql:8.0                        <span class="cmd-comment"># 사용할 이미지</span>
+    nginx:                                      <span class="cmd-comment"># Nginx web 서버 컨테이너 속성 정의</span>
+        ports:
+            - 80:80                             <span class="cmd-comment"># 호스트의 80번 포트를 컨테이너의 80번 포트에 연결</span>
+        volumes:
+            - /var/run/docker.sock:/tmp/docker.sock:ro  <span class="cmd-comment"># Docker 소켓을 read 전용으로 마운트</span>
+        restart: always                         <span class="cmd-comment"># 컨테이너가 종료되면 항상 재시작</span>
+        logging:
+            options:
+                max-size: 1g                    <span class="cmd-comment"># 로그 파일 최대 크기 1GB, 초과 시 로그 로테이션</span>
+        image: nginx                            <span class="cmd-comment"># 사용할 이미지</span>
+volumes:
+    mysql-data:                                 <span class="cmd-comment"># MySQL 영구 저장용 볼륨 정의</span>
+        external: true                          <span class="cmd-comment"># 이미 존재하는 외부 볼륨 사용</span>
+        name: mysql-data                        <span class="cmd-comment"># 실제 Docker 볼륨 이름</span></code></pre>
+        <p style="margin-bottom:0;"><strong>실행</strong></p>
+        <pre style="margin-bottom:0;"><code>$ docker compose up
+$ docker compose ps</code></pre>
+      </div>
+
+      <div class="summary">
+        <div class="box-head">핵심 정리</div>
+        <p>개별 <code>docker run</code> 명령을 한 번씩 반복하던 것이, 선언적 <span class="term" title="들여쓰기로 구조를 표현하는, 설정값을 적어두는 파일 형식">yaml</span> 파일 하나 + <code>docker compose up</code> 한 번으로 대체됩니다. 이 "여러 컨테이너를 하나의 정의서로 관리한다"는 발상은 <a href="#part5">Ⅴ장의 MSA 애플리케이션</a>(UI+세션+API Gateway+API 3종+DB 3종, 총 9개 컨테이너)을 다룰 때도 그대로 이어집니다.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="part4">
+      <div class="unit-kicker">PART Ⅳ</div>
+      <h2>Dockerfile 실습 — 이미지를 직접 만들어보기</h2>
+      <p class="unit-lede">지금까지 배운 Dockerfile 문법과 Docker Compose 문법을 실제로 빌드까지 해봅니다. <span style="color:var(--text-faint);font-size:0.9rem;">(대응 실습 결과물: <code>01_실습자료/docker_dockerfile_practice/</code>)</span></p>
+
+      <h3 id="u4-1">실습1 · 단일 Dockerfile 빌드</h3>
+      <p><strong>Dockerfile</strong> (<code>my-project/Dockerfile</code>)</p>
+      <p>이 코드가 하는 일을 한 줄로 요약하면: Node.js 앱 실행에 필요한 패키지를 설치하고 소스 코드를 컨테이너 안에 복사해 넣어, 80번 포트로 서비스를 여는 이미지를 만드는 Dockerfile입니다.</p>
+      <pre><code>FROM node:16-alpine            <span class="cmd-comment"># 생성할 이미지의 베이스 이미지를 지정</span>
+WORKDIR /usr/src/app           <span class="cmd-comment"># 명령어를 실행할 디렉토리(bash shell의 cd 명령어와 같은 기능)</span>
+COPY package*.json ./          <span class="cmd-comment"># Docker 외부의 파일을 복사하여 내부에 추가</span>
+RUN npm install                <span class="cmd-comment"># 이미지 빌드 시 실행되는 명령어</span>
+COPY . .
+EXPOSE 80                      <span class="cmd-comment"># 이미지에서 노출할 포트</span>
+CMD [ "node", "app.js" ]       <span class="cmd-comment"># 컨테이너 생성 시 실행되는 명령어(Dockerfile에서 한 번만 사용)</span></code></pre>
+
+      <p><strong>package.json 예시</strong></p>
+      <pre><code>{
+  "name": "my-project",
+  "version": "1.0.0",
+  "description": "dockerfile test"
+}</code></pre>
+
+      <p><strong>파일 구조</strong></p>
+      <pre><code>my-project
+├── Dockerfile
+└── package.json</code></pre>
+
+      <p><strong>빌드 및 확인</strong></p>
+      <pre><code>$ docker build --no-cache -t docker-test:1.0 .
+$ docker images
+<span class="cmd-comment"># IMAGE              ID             DISK USAGE   CONTENT SIZE
+# docker-test:1.0     99c4e23fac60   171MB        42.4MB</span></code></pre>
+
+      <h3 id="u4-2">실습2 · docker-compose로 다중 이미지 빌드</h3>
+      <p>Dockerfile 하나 대신, <code>docker-compose.yaml</code>로 여러 서비스를 한 번에 정의해 빌드할 수 있습니다.</p>
+
+      <p><strong>docker-compose.yaml</strong></p>
+      <pre><code>version: '1.0'                        <span class="cmd-comment"># Docker Compose 파일 버전</span>
+services:                             <span class="cmd-comment"># 서비스 정의: 배포할 컨테이너를 정의</span>
+  alpine:                             <span class="cmd-comment"># Alpine Linux 기반 컨테이너 서비스</span>
+    container_name: alpine-container  <span class="cmd-comment"># 컨테이너 이름</span>
+    image: alpine:1.0                 <span class="cmd-comment"># 빌드 후 생성 이미지 이름 및 태그</span>
+    build:
+      context: alpine                 <span class="cmd-comment"># Docker 빌드 컨텍스트 경로</span>
+      dockerfile: Dockerfile          <span class="cmd-comment"># 빌드할 도커파일 이름</span>
+  ubuntu:                             <span class="cmd-comment"># Ubuntu 기반 컨테이너 서비스</span>
+    container_name: ubuntu-container
+    image: ubuntu:22.04
+    build:
+      context: ubuntu
+      dockerfile: Dockerfile</code></pre>
+
+      <p><strong>alpine/Dockerfile</strong> — <a href="#u4-1">실습1의 Dockerfile</a>과 동일한 내용(FROM node:16-alpine → WORKDIR → COPY → RUN npm install → COPY → EXPOSE 80 → CMD)입니다.</p>
+
+      <p><strong>ubuntu/Dockerfile</strong></p>
+      <pre><code>FROM ubuntu:22.04              <span class="cmd-comment"># 생성할 이미지의 베이스 이미지를 지정</span>
+RUN echo "TEST ubuntu"         <span class="cmd-comment"># 이미지 빌드 과정에서 문자열 출력</span></code></pre>
+
+      <p><strong>파일 구조</strong></p>
+      <pre><code>my-project
+    ├── alpine
+    │       ├── Dockerfile
+    │       └── package.json
+    ├── docker-compose.yaml
+    └── ubuntu
+               └── Dockerfile</code></pre>
+
+      <p><strong>빌드 및 확인</strong></p>
+      <pre><code>$ docker compose build
+$ docker images
+<span class="cmd-comment"># IMAGE            ID             DISK USAGE   CONTENT SIZE
+# alpine:1.0        4396b8e63277   171MB        42.4MB
+# ubuntu:22.04     7c106361e6f1   117MB        29.7MB</span></code></pre>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>핵심 정리</div>
+        <p>실습1은 "Dockerfile 하나 = 이미지 하나"였다면, 실습2는 "docker-compose.yaml 하나 = 여러 이미지"를 보여줍니다 — <a href="#part3">Ⅲ장에서 배운 Compose</a>의 선언적 관리가 빌드 단계에도 그대로 적용되는 것입니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>실습1은 "레시피 한 장 → 요리 하나"였고, 실습2는 "메뉴판 한 장(docker-compose.yaml) → 요리 여러 개를 한 번에"입니다. 둘 다 결국 <code>docker build</code>가 하는 일(레시피대로 이미지를 만드는 것)은 같고, 여러 개를 한꺼번에 관리하느냐만 다릅니다.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="part5">
+      <div class="unit-kicker">PART Ⅴ</div>
+      <h2>MSA 애플리케이션 이미지 생성·배포 실습</h2>
+      <p class="unit-lede">마지막으로, 1강에서 배운 MSA 개념을 실제 애플리케이션(<code>edu-msa-*</code>)으로 가져와 각 서비스를 이미지로 만들고 Docker Hub라는 공유 저장소에 올리는 전 과정을 다룹니다.</p>
+
+      <h3 id="u5-1">01 · MSA 애플리케이션 아키텍처</h3>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0 6px;">
+        <div class="box" style="background:var(--surface);text-align:center;padding:14px;">UI 시스템<br><span class="tag">edu-msa-ui</span></div>
+        <div class="box" style="background:var(--surface);text-align:center;padding:14px;">세션<br><span class="tag">redis-msa-ui</span></div>
+      </div>
+      <p style="text-align:center;color:var(--text-faint);margin:2px 0;">↓</p>
+      <div class="box box-where" style="text-align:center;margin:0 0 6px;">
+        <div class="box-head" style="justify-content:center;">API Gateway <span class="tag" style="margin:0;">edu-msa-zuul</span></div>
+        <p style="margin:0;">API 서버 앞단에서 여러 API 서버들의 End-Point를 단일화하여 라우팅, 로드밸런싱 등의 역할을 하는 API</p>
+      </div>
+      <p style="text-align:center;color:var(--text-faint);margin:2px 0;">↓</p>
+      <div class="flow flow-3" style="margin:0 0 6px;">
+        <div class="box" style="background:var(--surface);text-align:center;padding:14px;">사용자API 시스템<br><span class="tag">edu-msa-user</span></div>
+        <div class="box" style="background:var(--surface);text-align:center;padding:14px;">댓글API 시스템<br><span class="tag">edu-msa-comment</span></div>
+        <div class="box" style="background:var(--surface);text-align:center;padding:14px;">게시글API 시스템<br><span class="tag">edu-msa-board</span></div>
+      </div>
+      <p style="text-align:center;color:var(--text-faint);margin:2px 0;">↓</p>
+      <div class="flow flow-3" style="margin:0 0 24px;">
+        <div class="box" style="background:var(--surface-alt);text-align:center;padding:14px;">사용자DB<br><span class="tag">mysql-msa-user</span></div>
+        <div class="box" style="background:var(--surface-alt);text-align:center;padding:14px;">댓글DB<br><span class="tag">mysql-msa-comment</span></div>
+        <div class="box" style="background:var(--surface-alt);text-align:center;padding:14px;">게시글DB<br><span class="tag">mysql-msa-board</span></div>
+      </div>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 API Gateway를 앞단에 두는가</div>
+        <p>1강에서 MSA의 단점으로 "개발/운영 복잡성"을 짚었습니다. 클라이언트(UI)가 사용자·댓글·게시글 API를 각각 따로 호출해야 한다면 그만큼 UI가 복잡해지고, API 서버 주소가 바뀔 때마다 UI도 함께 고쳐야 합니다. API Gateway(edu-msa-zuul)는 여러 API 서버의 End-Point를 하나로 단일화해 라우팅·로드밸런싱을 대신 처리함으로써 이 복잡성을 흡수합니다.</p>
+      </div>
+
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디에 적용되는가</div>
+        <p>UI 시스템(edu-msa-ui) + 세션(redis-msa-ui) + API Gateway(edu-msa-zuul) + 사용자/댓글/게시글 API + 각 API 전용 DB(mysql-msa-*), 총 9개의 개별 컨테이너로 구성된 실제 게시판형 MSA 애플리케이션 예시입니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>API Gateway는 건물의 안내데스크와 비슷합니다. 방문객(UI)이 사용자팀·댓글팀·게시글팀 사무실을 일일이 찾아다니지 않아도, 안내데스크(Gateway) 한 곳에만 물어보면 알맞은 사무실로 연결해줍니다. 사무실 위치가 바뀌어도 방문객은 몰라도 되고, 안내데스크만 새 위치를 알고 있으면 됩니다.</p>
+      </div>
+
+      <h3 id="u5-2">02 · 실습 절차 — 배포파일 다운로드부터 Docker Hub 푸시까지</h3>
+
+      <ol class="steps">
+        <li>
+          <h4>배포 파일 다운로드</h4>
+          <pre><code>$ cd ~
+$ git clone https://github.com/K-PaaS/edu-msa-file.git</code></pre>
+          MSA 애플리케이션 배포를 위한 배포 설정 파일(Dockerfile 등)을 내려받습니다.
+        </li>
+        <li>
+          <h4>war 파일 이동</h4>
+          각 프로젝트에서 빌드된 <span class="term" title="자바 웹 애플리케이션을 배포용으로 압축한 파일(Web Application Archive)">war 파일</span>을 MobaXterm의 sftp 기능으로 로컬 → 서버로 옮깁니다. 서버의 <code>/edu-msa-file/Docker/</code> 아래 <code>edu-msa-*</code> 각 폴더로 드래그하여 이동합니다.
+          <figure>
+            <img src="assets/02_Container_기술/images/p053_x278.png" alt="/edu-msa-file/Docker/ 폴더 아래 zuul/user/ui/comment/board 5개 폴더가 있는 SFTP 화면">
+            <figcaption>SFTP로 확인한 서버의 /edu-msa-file/Docker/ 폴더 — 서비스별로 폴더가 나뉘어 있다.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <h4>이미지 생성 준비 확인</h4>
+          Dockerfile 위치에 앞서 옮긴 war 파일과 미리 받아둔 <code>application.yml</code>이 같은 폴더 안에 구성되어 있는지 확인합니다(zuul 예시).
+          <figure>
+            <img src="assets/02_Container_기술/images/p054_x281.png" alt="edu-msa-zuul 폴더 안에 edu-msa-zuul-1.0.0.war, Dockerfile, application.yml 3개 파일이 있는 SFTP 화면">
+            <figcaption>edu-msa-zuul 폴더 내부 — war 파일, Dockerfile, application.yml이 한 폴더에 있어야 빌드할 수 있다.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <h4>Docker Hub 소개</h4>
+          도커에서 운영하는 도커 이미지 저장소(레지스트리) 서비스입니다. <a href="https://hub.docker.com/" target="_blank" rel="noopener">hub.docker.com</a> 접속 후 계정을 생성합니다.
+        </li>
+        <li>
+          <h4>이미지 저장소(Repository) 생성</h4>
+          "Repositories" 클릭 → Repository Name 입력(예: <code>edu-msa-board</code>) → Create. 이미지마다(zuul/user/ui/comment/board) 각각 Repository를 생성합니다.
+          <figure>
+            <img src="assets/02_Container_기술/images/p057_x293.png" alt="Docker Hub Repositories 목록 화면, 아직 저장소가 없어 Create repository 버튼이 보인다">
+            <figcaption>Docker Hub의 Repositories 화면 — 아직 저장소가 없는 상태에서 우측 상단 Create repository 버튼으로 저장소를 만든다.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/02_Container_기술/images/p059_x299.png" alt="edu-msa-zuul/user/ui/comment/board 5개 Repository가 모두 생성된 목록 화면">
+            <figcaption>이미지마다 Repository를 만든 결과 — edu-msa-zuul/user/ui/comment/board 5개가 준비됐다.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <h4>이미지 저장소 로그인</h4>
+          <pre><code><span class="cmd-comment"># Username과 Password에 도커 허브 계정 입력</span>
+$ docker login -u {DOCKER_HUB_ID}</code></pre>
+        </li>
+        <li>
+          <h4>이미지 빌드</h4>
+          <pre><code><span class="cmd-comment"># docker build --tag [생성할 이미지 이름]:[태그] [현재 위치]</span>
+$ cd ~/edu-msa-file/Docker/edu-msa-zuul/
+$ docker build --tag edu-msa-zuul:latest .
+<span class="cmd-comment"># 베이스 이미지: docker.io/library/openjdk:8-jdk-alpine</span></code></pre>
+          <figure>
+            <img src="assets/02_Container_기술/images/p061_x305.png" alt="docker build --tag edu-msa-zuul:latest . 실행 로그, 8단계 빌드 완료">
+            <figcaption>docker build --tag edu-msa-zuul:latest . 실행 로그 — 여러 단계를 거쳐 이미지가 완성된다.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <h4>이미지 태그</h4>
+          <pre><code><span class="cmd-comment"># docker tag [기존 이미지 이름] [도커허브ID/레파지토리]</span>
+$ docker tag edu-msa-zuul ${DOCKER_HUB_ID}/edu-msa-zuul
+$ docker images</code></pre>
+        </li>
+        <li>
+          <h4>이미지 푸시</h4>
+          <pre><code><span class="cmd-comment"># docker push [태그한 이미지 이름]</span>
+$ docker push ${DOCKER_HUB_ID}/edu-msa-zuul</code></pre>
+          <figure>
+            <img src="assets/02_Container_기술/images/p063_x312.png" alt="docker push 실행 로그, 레이어별 Pushed / Layer already exists, 최종 digest">
+            <figcaption>docker push 실행 로그 — 레이어 단위로 업로드되며, 이미 존재하는 레이어는 재사용된다.</figcaption>
+          </figure>
+        </li>
+        <li>
+          <h4>이미지 저장소 확인</h4>
+          Docker Hub에서 Repository를 확인합니다.
+          <figure>
+            <img src="assets/02_Container_기술/images/p064_x315.png" alt="Docker Hub의 edu-msa-zuul 저장소 페이지, 752.4 MB, latest 태그">
+            <figcaption>Docker Hub에서 확인한 최종 결과 — edu-msa-zuul 이미지가 저장소에 올라가 있다.</figcaption>
+          </figure>
+        </li>
+      </ol>
+
+      <div class="box box-how">
+        <div class="box-head"><span class="ico">⚙</span>이 실습 전체가 어떻게 하나로 연결되는가</div>
+        <p><a href="#part2">Ⅱ장에서 배운 Dockerfile → Image → Container 흐름</a>에 "레지스트리에 올린다(Push)"는 단계가 하나 더 붙은 것이 이번 실습입니다. 로컬(또는 실습 서버)에서 만든 이미지를 Docker Hub에 올려두면, 실제 운영 환경(예: Kubernetes 클러스터)에서는 이 저장소로부터 이미지를 pull 받기만 하면 되므로 — 1강에서 배운 "클라우드 및 OS 배포판 간 이식성"이 실제로 구현되는 지점입니다.</p>
+      </div>
+
+      <p style="color:var(--text-faint);font-size:0.88rem;">※ 이 프로젝트 폴더에 이미 <code>edu-msa-zuul-1.0.0.war</code>와 <code>.zip</code>이 남아있어 이 실습을 그대로 재현할 수 있습니다.</p>
+
+      <div class="summary">
+        <div class="box-head">핵심 정리</div>
+        <p>9개 컨테이너로 이루어진 MSA 애플리케이션 중 API Gateway(zuul) 하나를 예로 "Dockerfile 준비 → 빌드 → 태그 → 푸시 → 확인"까지 전 과정을 실습했습니다. 나머지 4개 서비스(user/comment/board/ui)도 동일한 절차를 반복하면 됩니다.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="lab-0708">
+      <div class="unit-kicker">LAB · 2026-07-08</div>
+      <h2>실전 실습 자료 (2026-07-08 수업)</h2>
+      <p class="unit-lede">이 절은 실제 2026-07-08 수업에서 진행한 실습 원본 파일입니다 — 위 Ⅲ·Ⅳ·Ⅴ장에서 원리로 설명한 Dockerfile·Docker Compose 문법이 그날 수업 폴더(<code>20260708_도커, 도커 컴포즈/</code>)에 실제로 어떤 파일로 남아있는지를 재구성 없이 그대로 옮긴 것입니다.</p>
+
+      <h3 id="lab-0708-1">실습1 · dockerfile1 — Node.js 앱을 위한 기본 Dockerfile</h3>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이 실습을 하는가</div>
+        <p>Ⅱ장에서 배운 <code>Dockerfile → Image → Container</code> 흐름, 그중에서도 <code>FROM</code>·<code>WORKDIR</code>·<code>COPY</code>·<code>RUN</code>·<code>CMD</code> 한 줄 한 줄이 이미지에 레이어를 하나씩 쌓아 올린다는 원리를 가장 단순한 Node.js 앱 하나로 직접 확인하기 위한 실습입니다.</p>
+      </div>
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디로 이어지는가</div>
+        <p>Ⅳ장 <a href="#u4-1">실습1</a>에서 원리로 설명한 것과 동일한 원본 파일이며, 이 폴더 자체가 그날 수업에서 <code>docker build --no-cache -t docker-test:1.0 .</code> 명령으로 실제 빌드에 쓰인 폴더입니다.</p>
+      </div>
+
+      <p><strong>파일 구조</strong></p>
+      <pre><code>dockerfile1
+├── Dockerfile
+└── package.json</code></pre>
+
+      <p><strong>Dockerfile</strong></p>
+      <p>이 코드가 하는 일을 한 줄로 요약하면: Node.js 앱 실행에 필요한 패키지를 설치하고 소스를 담아, 80번 포트로 서비스를 여는 이미지를 만드는 Dockerfile입니다(Ⅳ장 실습1과 동일).</p>
+      <pre><code>FROM node:16-alpine
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 80
+CMD [ &quot;node&quot;, &quot;app.js&quot; ]</code></pre>
+
+      <p><strong>package.json</strong></p>
+      <pre><code>{
+  &quot;name&quot;: &quot;my-project&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;description&quot;: &quot;dockerfile test&quot;
+}</code></pre>
+
+      <h3 id="lab-0708-2">실습2 · dockerfile2 — Compose로 alpine·ubuntu 이미지 동시 빌드</h3>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이 실습을 하는가</div>
+        <p>Ⅲ장에서 배운 "여러 컨테이너를 하나의 yaml로 정의해 관리한다"는 Docker Compose의 발상을, 실행 단계가 아니라 <strong>빌드 단계</strong>에 적용해본 실습입니다. <code>docker-compose.yaml</code> 하나에 <code>alpine</code>·<code>ubuntu</code> 두 서비스의 <code>build.context</code>를 각각 다른 하위 폴더로 지정해, 서로 다른 Dockerfile 두 개를 한 번의 <code>docker compose build</code>로 동시에 빌드합니다.</p>
+      </div>
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디로 이어지는가</div>
+        <p>Ⅳ장 <a href="#u4-2">실습2</a>에서 원리로 설명한 것과 동일한 원본 파일입니다. <code>alpine/</code> 폴더는 실습1(dockerfile1)의 Node.js Dockerfile을 그대로 재사용하고, <code>ubuntu/</code> 폴더에는 별도의 짧은 Dockerfile을 둡니다.</p>
+      </div>
+
+      <p><strong>파일 구조</strong></p>
+      <pre><code>dockerfile2
+├── alpine
+│   ├── Dockerfile
+│   └── package.json
+├── docker-compose.yml
+└── ubuntu
+    └── Dockerfile</code></pre>
+
+      <p><strong>docker-compose.yml</strong></p>
+      <pre><code>version: '1.0'
+services:
+  alpine:
+    container_name: alpine-container
+    image: alpine:1.0
+    build:
+      context: alpine
+      dockerfile: Dockerfile
+  ubuntu:
+    container_name: ubuntu-container
+    image: ubuntu:22.04
+    build:
+      context: ubuntu
+      dockerfile: Dockerfile</code></pre>
+
+      <p><strong>alpine/Dockerfile</strong></p>
+      <pre><code>FROM node:16-alpine
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 80
+CMD [ &quot;node&quot;, &quot;app.js&quot; ]</code></pre>
+
+      <p><strong>alpine/package.json</strong></p>
+      <pre><code>{
+  &quot;name&quot;: &quot;my-project&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;description&quot;: &quot;dockerfile test&quot;
+}</code></pre>
+
+      <p><strong>ubuntu/Dockerfile</strong></p>
+      <pre><code>FROM ubuntu:22.04
+RUN echo &quot;TEST ubuntu&quot;</code></pre>
+
+      <h3 id="lab-0708-3">실습3 · docker-compose.yml — MySQL + Nginx(워드프레스용) 실전형 구성</h3>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이 실습을 하는가</div>
+        <p>Ⅲ장 03절(실습 비교)에서 "<code>docker run</code>을 반복하는 대신 yaml 하나로 선언한다"고 설명한 예시가 실제로 나온 원본 파일입니다. named volume(<code>mysql-data</code>)과 이미 존재하는 볼륨을 그대로 쓰는 <code>external: true</code>, 컨테이너 재시작 정책(<code>restart: always</code>), 로그 로테이션(<code>logging.options.max-size</code>) 등 compose 문법이 실제 워드프레스용 DB+웹서버 스택에 어떻게 쓰이는지 보여줍니다.</p>
+      </div>
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디로 이어지는가</div>
+        <p>Ⅲ장 <a href="#u3-3">03절의 "After" 예시</a>와 내용이 동일한 실제 소스 파일입니다 — 교안용으로 재구성한 코드가 아니라, 그날 수업에서 작성해 남겨둔 <code>docker-compose.yml</code> 원본 그대로입니다.</p>
+      </div>
+
+      <p><strong>docker-compose.yml</strong></p>
+      <pre><code>name: mysql_nginx_service
+services:
+  mysql:
+    volumes:
+      - mysql-data:/var/lib/mysql
+    environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=true
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_USER=wordpress
+      - MYSQL_PASSWORD=awesome-wordpress-password
+    image: mysql:8.0
+  nginx:
+    ports:
+      - 80:80
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    restart: always
+    logging:
+      options:
+        max-size: 1g
+    image: nginx
+volumes:
+  mysql-data:
+    external: true
+    name: mysql-data</code></pre>
+
+      <h3 id="lab-0708-4">실습4 · edu-msa-zuul — MSA API Gateway 이미지</h3>
+
+      <div class="box box-why">
+        <div class="box-head"><span class="ico">?</span>왜 이 실습을 하는가</div>
+        <p>Ⅴ장에서 설명한 "API Gateway가 여러 API 서버의 End-Point를 단일화해 라우팅한다"는 개념이 실제 <code>Dockerfile</code>과 <code>application.yml</code>로 어떻게 구현되는지 확인하는 실습입니다. Dockerfile은 사내(K-PaaS) 레지스트리의 <code>openjdk:8-jdk-alpine</code>을 베이스로, <code>ARG</code>로 받은 war 파일을 <code>COPY</code>하고 <code>application.yml</code>을 함께 넣은 뒤 <code>ENTRYPOINT</code>로 실행합니다. application.yml의 <code>zuul.routes</code>는 <code>/user</code>·<code>/board</code>·<code>/comments</code> 3개 경로를 각 API 서버로 라우팅하고, <code>hystrix</code> 설정은 특정 API가 응답하지 않을 때 요청이 무한정 쌓이지 않도록 서킷 브레이커(요청 3회 실패 시 5초간 차단)를 겁니다.</p>
+      </div>
+      <div class="box box-where">
+        <div class="box-head"><span class="ico">◎</span>어디로 이어지는가</div>
+        <p>Ⅴ장 <a href="#u5-2">02절 실습 절차</a>에서 "Dockerfile 준비 → 빌드 → 태그 → 푸시"로 설명한 <code>edu-msa-zuul</code> 이미지의 실제 원본 폴더입니다. 이 API Gateway 이미지는 이후 7강 PaaS 실습에서 배포하는 게시판 애플리케이션의 진입점 이미지로 이어집니다.</p>
+      </div>
+
+      <div class="box box-plain">
+        <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>
+        <p>application.yml의 hystrix 설정은 "특정 API가 자꾸 응답하지 않으면(3회 실패), 잠깐(5초) 동안은 그쪽으로 요청을 아예 보내지 않고 쉬게 해준다"는 안전장치입니다. 콜센터에서 계속 응답 없는 부서로 전화를 계속 돌리지 않고 잠시 연결을 끊어두는 것과 같은 원리이며, 이를 "서킷 브레이커"라고 부릅니다.</p>
+      </div>
+
+      <p><strong>파일 구조</strong></p>
+      <pre><code>edu-msa-zuul
+├── Dockerfile
+├── application.yml
+└── edu-msa-zuul-1.0.0.war   <span class="cmd-comment"># ARG JAR_FILE로 COPY되는 빌드 산출물(war)</span></code></pre>
+
+      <p><strong>Dockerfile</strong></p>
+      <pre><code>FROM registry.k-paas.org/library/openjdk:8-jdk-alpine
+ARG JAR_FILE=edu-msa-zuul-1.0.0.war
+COPY ${JAR_FILE} edu-msa-zuul-1.0.0.war
+COPY application.yml /application.yml
+ENTRYPOINT [&quot;java&quot;,&quot;-jar&quot;,&quot;-Dspring.config.location=application.yml&quot;,&quot;/edu-msa-zuul-1.0.0.war&quot;]</code></pre>
+
+      <p><strong>application.yml</strong></p>
+      <pre><code>zuul:
+  retryable: true
+  routes:
+    user:
+      path: /user/**
+      url: http://${USER_MSA_URL}/user
+    board:
+      path: /board/**
+      url: http://${BOARD_MSA_URL}/board
+    comments:
+      path: /comments/**
+      url: http://${COMMENT_MSA_URL}/comments
+
+hystrix:
+  command:
+    default:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 32000
+      circuitBreaker:
+        enabled: true
+        requestVolumeThreshold: 3
+        sleepWindowInMilliseconds: 5000
+        errorThresholdPercentage: 50
+      metrics:
+        rollingStats:
+          timeInMilliseconds: 10000
+
+user:
+  ribbon:
+    MaxAutoRetries: 3
+    MaxAutoRetriesNextServer: 1
+    OkToRetryOnAllOperations: true
+    ConnectTimeout: 3000
+    ReadTimeout: 5000
+board:
+  ribbon:
+    MaxAutoRetries: 1
+    MaxAutoRetriesNextServer: 1
+    OkToRetryOnAllOperations: true
+    ConnectTimeout: 3000
+    ReadTimeout: 5000
+comments:
+  ribbon:
+    MaxAutoRetries: 1
+    MaxAutoRetriesNextServer: 1
+    OkToRetryOnAllOperations: true
+    ConnectTimeout: 3000
+    ReadTimeout: 5000
+
+server:
+  port: 28081
+
+ApiMasterKey: '&lt;프로젝트 API 마스터 키&gt;'
+ApiKeySalt: '&lt;프로젝트 API 솔트&gt;'</code></pre>
+
+      <div class="box box-warn">
+        <div class="box-head"><span class="ico">!</span>보안 처리 안내</div>
+        <p>원본 <code>application.yml</code>의 <code>ApiMasterKey</code>·<code>ApiKeySalt</code> 값은 실제 자격증명으로 보여 위와 같이 자리표시자로 가렸습니다. 나머지 라우팅·타임아웃·서킷 브레이커 설정은 원본 그대로입니다.</p>
+      </div>
+
+      <div class="summary">
+        <div class="box-head">핵심 정리</div>
+        <p>네 가지 실습 모두 위 Ⅱ~Ⅴ장에서 원리로 설명한 문법이 실제 수업 폴더에 그대로 남아있는 원본 파일입니다 — 단일 Dockerfile(실습1), Compose로 여러 이미지 동시 빌드(실습2), 실전형 MySQL+Nginx compose(실습3), 그리고 실제 MSA API Gateway 이미지(실습4)까지, 개념 설명과 실제 실습 결과물이 어떻게 이어지는지 확인할 수 있습니다.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="unit" id="glossary">
+      <div class="unit-kicker">REFERENCE</div>
+      <h2>중요 용어 사전</h2>
+      <dl class="glossary cols-2">
+        <div><dt>Container</dt><dd>가상화된 OS 위에서 애플리케이션 독립 실행에 필요한 파일을 모은 패키지</dd></div>
+        <div><dt>Hypervisor</dt><dd>물리 서버 위에서 Guest OS 단위로 가상화하는 계층(VM 방식)</dd></div>
+        <div><dt>Container Engine</dt><dd>컨테이너 관리용 API/CLI를 제공하는 소프트웨어(docker-ce, Podman, rkt)</dd></div>
+        <div><dt>Container Runtime</dt><dd>루트 파일시스템과 메타데이터를 받아 컨테이너를 실제로 실행하는 도구</dd></div>
+        <div><dt>OCI</dt><dd>Open Container Initiative — 컨테이너 실행 표준 규격(runC가 준수)</dd></div>
+        <div><dt>runC</dt><dd>OCI를 준수하는 가장 일반적인 Container Runtime</dd></div>
+        <div><dt>containerd / cri-o</dt><dd>runC에 의존하는 상위 레벨 컨테이너 런타임</dd></div>
+        <div><dt>Docker</dt><dd>컨테이너를 관리·운영하는 오픈소스 가상화 플랫폼</dd></div>
+        <div><dt>Dockerfile</dt><dd>이미지 생성을 위한 명령어 기반 설정 파일</dd></div>
+        <div><dt>Docker Image</dt><dd>Dockerfile을 Build하여 만든, 실행에 필요한 파일·설정을 담은 산출물</dd></div>
+        <div><dt>Docker Container</dt><dd>Docker Image를 Run하여 격리된 공간에서 애플리케이션을 동작시킨 상태</dd></div>
+        <div><dt>Docker Hub</dt><dd>도커에서 운영하는 도커 이미지 저장소(레지스트리) 서비스</dd></div>
+        <div><dt>Repository(이미지 저장소)</dt><dd>Docker Hub 안에서 이미지를 보관·공유하는 단위</dd></div>
+        <div><dt>Docker Compose</dt><dd>단일 서버에서 여러 컨테이너를 하나의 서비스로 정의·관리하는 도구</dd></div>
+        <div><dt>WAR 파일</dt><dd>자바 웹 애플리케이션 배포용 압축 파일</dd></div>
+        <div><dt>API Gateway (Zuul)</dt><dd>여러 API 서버의 End-Point를 단일화해 라우팅·로드밸런싱하는 컴포넌트</dd></div>
+      </dl>
+    </section>
+
+    <section class="unit" id="wrap">
+      <div class="unit-kicker">WRAP-UP</div>
+      <h2>정리 & 다음 강의 연결</h2>
+      <div class="summary">
+        <div class="box-head">한 줄 정리</div>
+        <p>컨테이너는 "OS를 통째로 복제하지 않는" 가벼운 가상화 방식이고, Docker는 이를 <code>Dockerfile → Image → Container</code>로 만들고 다루는 도구이며, Docker Compose는 여러 컨테이너를 하나의 정의서로 관리하게 해줍니다. 이 모든 것을 실제 MSA 애플리케이션(edu-msa-zuul 등)에 적용해 이미지를 빌드하고 Docker Hub에 푸시하는 실습까지 마쳤습니다.</p>
+      </div>
+      <p>다음 강의(<strong>3강 · IaaS 이론</strong>)에서는 지금까지 "로컬/실습 서버 한 대"에서 다루던 컨테이너를, K-PaaS 오픈소스 구성요소와 NHN Cloud 리소스라는 실제 인프라(IaaS) 위에서 어떻게 준비하는지를 다룹니다.</p>
+    </section>
+
+    <nav class="lecture-nav">
+      <a href="01_클라우드네이티브_이론.html"><span class="dir">이전</span>1강 · 클라우드 네이티브 이론</a>
+      <a class="next" href="03_IaaS_이론.html"><span class="dir">다음</span>3강 · IaaS 이론</a>
+    </nav>
+  </main>
+</div>
+<script src="assets/_shared/lecture.js"></script>
+</body>
+</html>
