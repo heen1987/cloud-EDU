@@ -66,6 +66,65 @@
   }
 }
 
+/* explicit user choice always wins over prefers-color-scheme */
+:root[data-theme="dark"] {
+  --bg: #14161f;
+  --surface: #1b1e2b;
+  --surface-alt: #22263a;
+  --border: #313548;
+  --text: #eceef5;
+  --text-dim: #b7bccf;
+  --text-faint: #8890a3;
+  --accent: #7f9bff;
+  --accent-dim: #232a4d;
+  --why: #f0b25e;
+  --why-bg: #322510;
+  --why-border: #5a4419;
+  --where: #6fb3f2;
+  --where-bg: #112238;
+  --where-border: #1c3a5c;
+  --how: #63d6ac;
+  --how-bg: #0f2a22;
+  --how-border: #1a4636;
+  --warn: #f0879b;
+  --warn-bg: #341620;
+  --warn-border: #5a2532;
+  --plain: #b7bccf;
+  --plain-bg: #21242f;
+  --plain-border: #363a48;
+  --code-bg: #10121c;
+  --code-text: #dfe3f5;
+}
+
+:root[data-theme="light"] {
+  --bg: #f6f7fb;
+  --surface: #ffffff;
+  --surface-alt: #f0f2f8;
+  --border: #e2e5ee;
+  --text: #1c2130;
+  --text-dim: #565d72;
+  --text-faint: #8890a3;
+  --accent: #3454d1;
+  --accent-dim: #eaefff;
+  --why: #b4650a;
+  --why-bg: #fff6e9;
+  --why-border: #f3d9ad;
+  --where: #1868b0;
+  --where-bg: #eaf4ff;
+  --where-border: #bcdcfb;
+  --how: #147d5c;
+  --how-bg: #e9faf3;
+  --how-border: #aee6cd;
+  --warn: #b0304a;
+  --warn-bg: #fdeef1;
+  --warn-border: #f3c3cf;
+  --plain: #5b5f73;
+  --plain-bg: #f1f2f6;
+  --plain-border: #dbdde6;
+  --code-bg: #1e2233;
+  --code-text: #e3e7f7;
+}
+
 * { box-sizing: border-box; }
 
 html { scroll-behavior: smooth; }
@@ -571,10 +630,39 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 
 /* ---------- print ---------- */
 @media print {
-  .toc, .toc-toggle, .lecture-nav { display: none !important; }
+  .toc, .toc-toggle, .lecture-nav, .theme-toggle { display: none !important; }
   .layout { display: block; }
   main { padding: 0; }
   body { background: #fff; }
   section.unit { break-inside: avoid-page; }
   .box, .summary, figure { break-inside: avoid; }
+}
+
+/* ---------- theme toggle ---------- */
+.theme-toggle {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,0,0,.16);
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.theme-toggle .icon { font-size: 1rem; line-height: 1; }
+@media (max-width: 880px) {
+  .theme-toggle { right: 12px; bottom: 12px; padding: 8px 14px; font-size: 0.8rem; }
+}
+@media print {
+  .theme-toggle { display: none !important; }
 }
