@@ -455,6 +455,8 @@ Setting up terraform (1.15.6) ...</span></div>
         </table>
       </div>
 
+      <p style="color:var(--text-faint);font-size:0.92rem;">참고로 <code>terraform init</code>이 내려받는 프로바이더(예: OpenStack)의 정확한 리소스·속성 문법은 <a href="https://registry.terraform.io/" target="_blank" rel="noopener">Terraform Registry</a>(<code>registry.terraform.io</code>)에서 찾을 수 있습니다 — <code>provider.tf</code> 주석에 적힌 "Terraform 레지스트리에서 다운로드할 오픈스택 플러그인의 저장소 위치"가 바로 이 레지스트리를 가리키는 것입니다.</p>
+
       <div class="box box-where">
         <div class="box-head"><span class="ico">◎</span>실무에서 어떤 상황에 적용되는가</div>
         <p>이 6개 명령어는 실습에서만 쓰고 끝나는 것이 아니라, 실무에서 인프라를 변경할 때 밟는 표준 절차 그 자체입니다. 예를 들어 팀에서 코드 리뷰(PR) 시점에는 <code>terraform plan</code> 결과를 첨부해 '무엇이 바뀌는지'를 함께 검토하고, 병합 후 배포 <span class="term" title="여러 작업 단계를 순서대로 자동 연결해 놓은 처리 흐름">파이프라인</span>에서 <code>terraform apply</code>를 자동 실행하는 식으로 <span class="term" title="코드를 자동으로 테스트하고 배포하는 일련의 자동화 절차(지속적 통합/지속적 배포)">CI/CD</span>에 그대로 편입됩니다.</p>
