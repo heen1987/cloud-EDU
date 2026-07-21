@@ -331,6 +331,22 @@ $ chmod 600 K-PaaS-Key3.pem
 <span class="cmd-comment"># Worker 노드로 접속 (Control Plane 내부에서 실행)</span>
 $ ssh -i K-PaaS-Key3.pem ubuntu@192.168.3.29</code></pre>
 
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">ubuntu@edu1-cluster2: ~</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> ssh -i K-PaaS-Key3.pem ubuntu@192.168.3.29
+<span class="out">Welcome to Ubuntu 22.04 LTS (GNU/Linux)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+...</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 접속에 성공하면 이런 환영 메시지(MOTD)와 함께 프롬프트가 접속한 워커 노드 것으로 바뀐다. 실제 배너의 세부 문구·시스템 통계는 우분투 버전과 서버 상태에 따라 다르다.</p>
+
       <div class="box box-how">
         <div class="box-head"><span class="ico">⚙</span>왜 Pem Key를 Control Plane 안에도 복사해 둬야 하는가</div>
         <p>모든 인스턴스는 생성 시 동일한 키페어(<code>K-PaaS-Key</code>)로 만들어졌기 때문에, Worker/NFS 접속에도 같은 개인키가 필요합니다. 로컬 PC의 키를 Worker에 직접 쓸 수는 없으므로(Worker는 플로팅 IP가 없어 로컬에서 직접 도달 불가), 이미 접속해 있는 Control Plane 내부에 키 사본을 만들어 두고, 그 사본으로 내부망을 통해 Worker/NFS에 다시 접속하는 것입니다.</p>
@@ -412,6 +428,17 @@ $ ssh -i K-PaaS-Key3.pem ubuntu@192.168.3.29</code></pre>
 $ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
 $ sudo apt update && sudo apt install terraform</code></pre>
 
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">bash</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> sudo apt update &amp;&amp; sudo apt install terraform
+<span class="out">...
+Setting up terraform (1.15.6) ...</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 실제 화면에는 패키지 목록 갱신·의존성 처리 로그가 훨씬 길게 출력되며, 설치되는 버전도 실습 시점의 배포판에 따라 달라진다.</p>
+
       <p>Terraform <span class="term" title="Command Line Interface — 마우스 클릭 대신 글자로 명령을 입력해 조작하는 화면(터미널)">CLI</span>는 인프라를 코드로 정의(IaC)하고 배포·관리하는 데 사용하는 명령줄 도구입니다. 코드의 유효성을 검증하고, 실제 배포 전 변경사항을 미리 예측하며, 안전하게 인프라를 생성·삭제하는 것이 핵심 특징입니다. 기본 형태는 <code>terraform [global options] subcommand [args]</code> 입니다.</p>
 
       <div class="table-wrap">
@@ -437,6 +464,59 @@ $ sudo apt update && sudo apt install terraform</code></pre>
         <div class="box-head"><span class="ico">⚙</span>왜 반드시 init → validate → plan → apply 순서인가</div>
         <p><code>init</code>은 코드에서 선언한 프로바이더(openstack) 플러그인을 내려받아 이 코드를 실행할 수 있는 상태로 만듭니다. <code>validate</code>는 문법 오류를 걸러내고, <code>plan</code>은 '지금 코드와 실제 클라우드 상태를 비교했을 때 무엇이 새로 생성·변경·삭제될지'를 미리 계산해 사람이 검토할 기회를 줍니다. <code>apply</code>는 그 계획을 실제로 실행합니다. 이 미리보기(plan) 단계가 있기 때문에, 오히려 콘솔에서 클릭 몇 번으로 바로 실행되는 것보다 더 안전하게 대규모 인프라를 변경할 수 있습니다.</p>
       </div>
+
+      <p style="color:var(--text-faint);font-size:0.92rem;">아래는 <code>init → validate → plan → apply</code> 순서대로 실행했을 때 실제 화면에 나타나는 출력이다.</p>
+
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">bash</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> terraform init
+<span class="out">Initializing provider plugins found in the configuration...
+- Finding terraform-provider-openstack/openstack versions matching "~&gt; 1.42.0"...
+- Installing terraform-provider-openstack/openstack v1.42.0...
+- Installed terraform-provider-openstack/openstack v1.42.0 (self-signed, key ID 4F80527A391BEFD2)…</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">실제 실습 결과</span> 코드에 선언된 openstack 프로바이더 플러그인을 내려받아 설치하는 화면이다.</p>
+
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">bash</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> terraform validate
+<span class="out">Success! The configuration is valid.</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">실제 실습 결과</span> 문법 오류가 없으면 이 한 줄만 출력된다.</p>
+
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">bash</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> terraform plan
+<span class="out">data.openstack_networking_secgroup_v2.nhn-sg: Reading...
+data.openstack_networking_network_v2.nhn-network: Reading...
+data.openstack_images_image_v2.ubuntu_focal: Reading...
+data.openstack_networking_network_v2.ext_network: Reading...
+…</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">실제 실습 결과</span> main.tf의 data 블록들을 하나씩 조회(Reading)한 뒤, 무엇이 새로 생성될지 계획을 보여준다.</p>
+
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">bash</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> terraform apply
+<span class="out">data.openstack_images_image_v2.ubuntu_focal: Reading...
+data.openstack_networking_secgroup_v2.nhn-sg: Reading...
+data.openstack_networking_network_v2.ext_network: Reading...
+data.openstack_networking_network_v2.nhn-network: Reading...
+…</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">실제 실습 결과</span> plan과 동일하게 기존 리소스부터 조회한 뒤, 이어서 실제 인프라 생성이 진행된다(원본 자료에는 이후 로그가 이어지지 않는다).</p>
 
       <div class="box box-plain">
         <div class="box-head"><span class="ico">💬</span>쉽게 말하면</div>

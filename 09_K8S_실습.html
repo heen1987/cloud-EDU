@@ -120,6 +120,17 @@
 <pre><code><span class="cmd-comment"># 특정 노드에 새 Pod 스케줄 차단</span>
 $ kubectl cordon k8s-worker1
 $ kubectl get nodes   <span class="cmd-comment"># k8s-worker1 STATUS가 Ready,SchedulingDisabled로 표시됨</span></code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@k8s-master1: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> kubectl get nodes
+<span class="out">NAME          STATUS                    ROLES           AGE   VERSION
+k8s-master1   Ready                     control-plane   11d   v1.30.9
+k8s-worker1   Ready,SchedulingDisabled  &lt;none&gt;          11d   v1.30.9</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">실제 실습 결과</span> 1번 worker 노드에 SchedulingDisabled가 적용된 것을 확인할 수 있다.</p>
           </li>
           <li><h4>배포 확인 후 Cordon 해제</h4>
 <pre><code><span class="cmd-comment"># Deployment 배포 후 확인 — Cordon된 노드엔 배포되지 않음</span>
@@ -136,6 +147,15 @@ $ kubectl get pods -o wide   <span class="cmd-comment"># 해당 노드의 Pod가
           <li><h4>Taint 확인</h4>
 <pre><code>$ kubectl describe node k8s-master1 | grep -i taint
 <span class="cmd-comment"># Taints: node-role.Kubernetes.io/control-plane:NoSchedule</span></code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@k8s-master1: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> kubectl describe node k8s-master1 | grep -i taint
+<span class="out">Taints:               node-role.Kubernetes.io/control-plane:NoSchedule</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">실제 실습 결과</span> Master 노드에는 기본값으로 이 Taint가 적용되어 있어 일반 Pod가 배포되지 않는다.</p>
           </li>
           <li><h4>Toleration을 가진 Deployment로 Master 노드에도 배포</h4>
 <pre><code>apiVersion: apps/v1
@@ -387,6 +407,19 @@ $ kubectl set image deployment k8s-rolling-up-deploy nginx=nginx:1.15 --record -
 # 1         &lt;none&gt;
 # 2         &lt;none&gt;
 # 3         kubectl set image deployment k8s-rolling-up-deploy nginx=nginx:1.15 --record=true --namespace=cloud</span></code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@k8s-master1: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> kubectl rollout history deployment k8s-rolling-up-deploy --namespace cloud
+<span class="out">deployment.apps/k8s-rolling-up-deploy
+REVISION  CHANGE-CAUSE
+1         &lt;none&gt;
+2         &lt;none&gt;
+3         kubectl set image deployment k8s-rolling-up-deploy nginx=nginx:1.15 --record=true --namespace=cloud</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">실제 실습 결과</span> --record 옵션으로 이미지를 업데이트한 revision 3에만 CHANGE-CAUSE가 기록된 것을 확인할 수 있다.</p>
           </li>
           <li><h4>롤백 — 바로 이전 버전으로</h4>
 <pre><code>$ kubectl rollout undo deployment k8s-rolling-up-deploy --namespace cloud
@@ -689,6 +722,19 @@ spec:
 <pre><code>$ kubectl create --filename daemonset.yaml
 $ kubectl get pods --namespace kube-system -o wide
 <span class="cmd-comment"># k8s-master1, k8s-worker1, k8s-worker2, k8s-worker3 — 전체 노드에 1개씩 배포된 것을 확인</span></code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@k8s-master1: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> kubectl get pods --namespace kube-system -o wide
+<span class="out">NAME                    READY   STATUS    RESTARTS   AGE   IP               NODE
+k8s-daemonset-gg8r6     1/1     Running   0          8s    10.233.100.162   k8s-master1
+k8s-daemonset-h89z8     1/1     Running   0          8s    10.233.78.170    k8s-worker1
+k8s-daemonset-jghlj     1/1     Running   0          8s    10.233.122.16    k8s-worker2
+k8s-daemonset-tmrr4     1/1     Running   0          8s    10.233.88.12     k8s-worker3</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">실제 실습 결과</span> Master를 포함한 4개 노드 전체에 fluentd Pod가 1개씩 배포된 것을 확인할 수 있다.</p>
           </li>
         </ol>
         <p>로그 수집기는 관리용 Pod이므로 <code>kube-system</code> Namespace에 배포하며, Master 노드에도 배치되도록 control-plane Taint에 대한 Toleration을 명시합니다.</p>
@@ -765,6 +811,25 @@ $ kubectl expose deployment k8s-nodeport-deploy --type=NodePort --port 80 --targ
           <li><h4>ClusterIP 실습 — 내부에서만 접근 가능함을 확인</h4>
 <pre><code>$ kubectl get service --namespace cloud -o wide
 $ curl 10.233.53.190:8080   <span class="cmd-comment"># 클러스터 내부(예: 테스트용 Pod 안)에서만 curl 가능, 3개 Pod에 라운드로빈으로 분산됨</span></code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@k8s-master1: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> curl 10.233.53.190:8080
+<span class="out">Server address: 10.233.105.78:80
+Server name: k8s-clusterip-deploy-677dccd57f-j46tf
+Date: 04/May/2026:07:32:44 +0000
+URI: /
+Request ID: 9db1b400ea59ad9135f77b26114900fc</span>
+<span class="prompt">$</span> curl 10.233.53.190:8080
+<span class="out">Server address: 10.233.84.140:80
+Server name: k8s-clusterip-deploy-677dccd57f-nshhq
+Date: 04/May/2026:07:32:46 +0000
+URI: /
+Request ID: 91d23141805ee449829ef640a12203a1</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">실제 실습 결과</span> 같은 주소로 두 번 curl했는데 매번 다른 Pod(server name)가 응답한다 — Service가 라운드로빈으로 분산시킨 것이다.</p>
           </li>
           <li><h4>LoadBalancer 실습 — External-IP 확인</h4>
 <pre><code>$ kubectl get service -o wide --namespace cloud
@@ -837,6 +902,21 @@ $ kubectl describe ingress k8s-ing --namespace cloud
 <span class="cmd-comment"># ingress-nginx-controller가 LoadBalancer 타입으로 사전에 설치되어 있어야 Ingress 사용 가능</span>
 $ curl {공인IP}:31080/hello
 $ curl {공인IP}:31080/httpd</code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@k8s-master1: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> curl 133.186.215.162:31080/hello
+<span class="out">Server address: 10.233.88.20:80
+Server name: hello-58ffcf5569-9qfj4
+Date: 27/Oct/2025:06:42:16 +0000
+URI: /
+Request ID: 7aa6d0189a3c9abbaed99769f19f881d</span>
+<span class="prompt">$</span> curl 133.186.215.162:31080/httpd
+<span class="out">&lt;html&gt;&lt;body&gt;&lt;h1&gt;It works!&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">실제 실습 결과</span> 같은 진입점(IP:포트)인데 경로(/hello, /httpd)에 따라 서로 다른 Service가 응답한 것을 확인할 수 있다.</p>
           </li>
           <li><h4>방법3) Host 기반 라우팅 — 서로 다른 도메인마다 다른 Service로 연결</h4>
 <pre><code>$ curl k8s.hello.com
@@ -998,6 +1078,18 @@ spec:
 PAAS
 / # cat PAAS
 Platform as a service!</code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">/ (k8s-secret-pod3 컨테이너 내부)</span>
+  </div>
+  <div class="term-body"><span class="prompt">/ #</span> cd /secrets
+<span class="prompt">/ #</span> ls
+<span class="out">PAAS</span>
+<span class="prompt">/ #</span> cat PAAS
+<span class="out">Platform as a service!</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">실제 실습 결과</span> Secret이 환경변수가 아니라 /secrets 경로의 파일로 마운트되어, 키 이름(PAAS)이 그대로 파일명이 된 것을 확인할 수 있다.</p>
           </li>
         </ol>
       </div>
@@ -1196,6 +1288,16 @@ $ kubectl get pv</code></pre>
 $ kubectl get pvc
 <span class="cmd-comment"># NAME       STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS
 # k8s-pvc1   Bound    k8s-pv1    1G         RWO            k8s-storageclass</span></code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@k8s-master1: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> kubectl get pvc
+<span class="out">NAME       STATUS   VOLUME    CAPACITY   ACCESS MODES   STORAGECLASS
+k8s-pvc1   Bound    k8s-pv1   1G         RWO            k8s-storageclass</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">실제 실습 결과</span> PVC가 요청한 용량(1G)과 정확히 일치하는 PV(k8s-pv1)를 찾아 자동으로 Bound된 것을 확인할 수 있다.</p>
           </li>
           <li><h4>Pod가 PVC를 마운트해서 데이터 기록 후, 로컬 디렉토리에서 확인</h4>
 <pre><code>$ kubectl exec -it k8s-pod1 -- /bin/sh
@@ -1484,6 +1586,15 @@ $ kubectl config use-context kuber-context</code></pre>
           <li><h4>권한 범위 검증 — 부여받지 않은 Namespace를 조회하면 거부됨</h4>
 <pre><code>$ kubectl get pod --namespace defaults
 <span class="cmd-comment"># Error from server (Forbidden): pods is forbidden: User "kuber-user" cannot list resource "pods" in API group "" in the namespace "defaults"</span></code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@k8s-master1: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> kubectl get pod --namespace defaults
+<span class="out">Error from server (Forbidden): pods is forbidden: User "kuber-user" cannot list resource "pods" in API group "" in the namespace "defaults"</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">실제 실습 결과</span> RoleBinding으로 부여받은 Namespace(k8s-namespace) 밖을 조회하면 이렇게 Forbidden 에러로 거부된다 — 설정 실수가 아니라 RBAC가 의도대로 작동한 것이다.</p>
           </li>
           <li><h4>현재 컨텍스트 확인</h4>
 <pre><code>$ kubectl config view

@@ -144,6 +144,21 @@
 $ cd ~
 $ git clone https://github.com/K-PaaS/edu-msa-file.git</code></pre>
 
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">ubuntu@k8s-master1: ~</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> git clone https://github.com/K-PaaS/edu-msa-file.git
+<span class="out">Cloning into 'edu-msa-file'...
+remote: Enumerating objects: 120, done.
+remote: Counting objects: 100% (120/120), done.
+remote: Compressing objects: 100% (85/85), done.
+Receiving objects: 100% (120/120), 45.02 KiB | 2.14 MiB/s, done.
+Resolving deltas: 100% (32/32), done.</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 객체 수·전송 속도 등 실제 출력 값은 저장소 크기와 네트워크 환경마다 다르며, 이 화면은 git clone 명령의 일반적인 출력 형태를 보여주기 위한 예시다.</p>
+
       <div class="table-wrap">
         <table>
           <thead><tr><th>애플리케이션</th><th>변수</th><th>포트번호</th></tr></thead>
@@ -226,6 +241,21 @@ USE msa_board;
 
 > exit
 # exit</code></pre>
+
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">ubuntu@k8s-master1: ~</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> kubectl get pods
+<span class="out">NAME                                  READY   STATUS    RESTARTS   AGE
+mysql-msa-board-7d86858bcb-bkg5j      1/1     Running   0          2m10s
+mysql-msa-comment-6f7cd65b8d-9jwrb    1/1     Running   0          2m10s
+mysql-msa-user-788b778c6d-4tbwm       1/1     Running   0          2m10s
+redis-msa-ui-xxxxxxxxxx-xxxxx         1/1     Running   0          3m41s</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> pod 이름 뒤의 무작위 문자열(해시)은 배포할 때마다 달라진다 — 이 pod 이름들은 원본 자료에도 "예시"로 표기되어 있으며, 실제 접속 시에는 내 환경의 <code>kubectl get pods</code> 결과에 나온 이름을 그대로 써야 한다.</p>
+
           <p style="color:var(--text-faint);font-size:0.9rem;">comment/user DB도 DB명·테이블명만 바꿔 동일한 패턴으로 생성합니다: <code>CREATE DATABASE msa_comment</code> + <code>TB_COMMENT</code>(comment_seq, board_seq, comment 등), <code>CREATE DATABASE msa_user</code> + <code>TB_USER</code>(user_seq, user_id, user_passwd 등, <code>UNIQUE KEY id_key(user_id)</code>).</p>
         </li>
       </ol>
@@ -380,6 +410,19 @@ $ cd ~/edu-msa-file/Docker/edu-msa-zuul/
 $ docker build --tag edu-msa-zuul:latest .
 $ docker tag edu-msa-zuul ${도커허브ID}/edu-msa-zuul
 $ docker push ${도커허브ID}/edu-msa-zuul</code></pre>
+
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">bash</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> docker build --tag edu-msa-board:latest .
+<span class="out">...
+Successfully built 1a2b3c4d5e6f
+Successfully tagged edu-msa-board:latest</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 실제 출력 값(이미지 해시 등)은 빌드할 때마다 다르며, 이 화면은 docker build 명령의 일반적인 출력 형태를 보여주기 위한 예시다. 나머지 4개 서비스(comment/ui/user/zuul)도 이미지 이름만 바뀔 뿐 같은 형태로 출력된다.</p>
+
           <figure>
             <img src="assets/07_PaaS_실습/images/p061_x429.png" alt="edu-msa-board 이미지 빌드 로그">
             <figcaption>edu-msa-board 이미지 빌드 로그 — Tomcat 베이스 이미지(tomcat:9-jre8-alpine) 위에 server.xml과 WAR 파일을 올려 이미지를 완성한다.</figcaption>
@@ -431,6 +474,29 @@ $ kubectl apply -f edu-msa-board.yaml -f edu-msa-comment.yaml -f edu-msa-ui.yaml
           <h4>배포 확인</h4>
           <pre><code>$ kubectl get pods
 $ kubectl get service</code></pre>
+
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">ubuntu@k8s-master1: ~</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> kubectl get pods
+<span class="out">NAME                                READY   STATUS    RESTARTS   AGE
+edu-msa-board-xxxxxxxxxx-xxxxx      1/1     Running   0          1m30s
+edu-msa-comment-xxxxxxxxxx-xxxxx    1/1     Running   0          1m30s
+edu-msa-ui-xxxxxxxxxx-xxxxx         1/1     Running   0          1m30s
+edu-msa-user-xxxxxxxxxx-xxxxx       1/1     Running   0          1m30s
+edu-msa-zuul-xxxxxxxxxx-xxxxx       1/1     Running   0          1m30s</span>
+
+<span class="prompt">$</span> kubectl get service
+<span class="out">NAME              TYPE       CLUSTER-IP    EXTERNAL-IP   PORT(S)          AGE
+edu-msa-ui        NodePort   10.x.x.x      &lt;none&gt;        8080:30001/TCP   1m30s
+edu-msa-zuul      NodePort   10.x.x.x      &lt;none&gt;        8080:30101/TCP   1m30s
+edu-msa-board     NodePort   10.x.x.x      &lt;none&gt;        8080:30201/TCP   1m30s
+edu-msa-comment   NodePort   10.x.x.x      &lt;none&gt;        8080:30301/TCP   1m30s
+edu-msa-user      NodePort   10.x.x.x      &lt;none&gt;        8080:30401/TCP   1m30s</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> pod 이름의 해시값과 CLUSTER-IP는 배포할 때마다 달라지며, PORT(S)의 NodePort(30001, 30101 등)만 u1-2 포트번호 테이블 값과 일치하면 정상 배포된 것이다.</p>
         </li>
         <li>
           <h4>접속 확인</h4>
@@ -961,6 +1027,21 @@ $ kubectl expose pod ssu-nginx --type=NodePort --port 80 --target-port=80 --name
 $ kubectl get service -n soongsil
 $ kubectl describe service ssu-nginx -n soongsil</code></pre>
 
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">ubuntu@k8s-master1: ~</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> kubectl get pod -n soongsil
+<span class="out">NAME        READY   STATUS    RESTARTS   AGE
+ssu-nginx   1/1     Running   0          22s</span>
+
+<span class="prompt">$</span> kubectl get service -n soongsil
+<span class="out">NAME        TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+ssu-nginx   NodePort   10.x.x.x       &lt;none&gt;        80:3xxxx/TCP   8s</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> CLUSTER-IP와 NodePort 번호(3xxxx)는 클러스터마다 자동 할당되어 달라진다 — kubectl run으로 만든 단독 Pod를 Service로 연결했을 때의 일반적인 조회 결과 형태다.</p>
+
       <div class="box box-why">
         <div class="box-head"><span class="ico">?</span>왜 이 실습을 마지막에 다시 하는가</div>
         <p>포털/파이프라인은 결국 이 kubectl 명령어들을 사람 대신 실행해 주는 것일 뿐입니다. CLI를 알아야 포털 화면 뒤에서 무슨 일이 벌어지는지 이해하고, 포털이 없는 환경(운영 서버 터미널 등)에서도 동일하게 다룰 수 있습니다.</p>
@@ -1000,6 +1081,21 @@ $ kubectl get pod -n soongsil   <span class="cmd-comment"># Pod 개수가 유지
 <span class="cmd-comment"># Deployment 삭제</span>
 $ kubectl delete deployment ssu-nginx2 -n soongsil
 $ kubectl get pod -n soongsil   <span class="cmd-comment"># Pod 삭제 확인</span></code></pre>
+
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">ubuntu@k8s-master1: ~</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> kubectl delete pod ssu-nginx2-568f6d6b4-d6x5m -n soongsil
+<span class="out">pod "ssu-nginx2-568f6d6b4-d6x5m" deleted</span>
+
+<span class="prompt">$</span> kubectl get pod -n soongsil
+<span class="out">NAME                          READY   STATUS    RESTARTS   AGE
+ssu-nginx2-568f6d6b4-f8x2q    1/1     Running   0          6s
+ssu-nginx2-568f6d6b4-h3k9p    1/1     Running   0          3m12s</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 삭제한 <code>-d6x5m</code> Pod는 사라졌지만 개수(2개)는 그대로이고, AGE가 "6s"인 새 Pod(<code>-f8x2q</code>)가 자동으로 채워진 것을 볼 수 있다 — Deployment의 자동 복구 동작을 보여주는 일반적인 예시 화면이다.</p>
 
       <div class="box box-why">
         <div class="box-head"><span class="ico">?</span>왜 Pod를 지워도 개수가 유지되는가</div>
@@ -1248,6 +1344,19 @@ $ kubectl get service
 'org.springframework.validation.beanvalidation.OptionalValidatorFactoryBean'
 Caused by: java.lang.NoSuchMethodError:
 javax.validation.BootstrapConfiguration.getClockProviderClassName()</code></pre>
+
+        <div class="term-window">
+          <div class="term-titlebar">
+            <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+            <span class="term-label">edu-msa-board pod 로그</span>
+          </div>
+          <div class="term-body"><span class="out">BeanCreationException: Error creating bean with name
+'org.springframework.validation.beanvalidation.OptionalValidatorFactoryBean'
+Caused by: java.lang.NoSuchMethodError:
+javax.validation.BootstrapConfiguration.getClockProviderClassName()</span></div>
+        </div>
+        <p class="term-caption"><span class="tag-example">실제 실습 결과</span> 2026-07-14 수업 중 실제로 발생한 애플리케이션 기동 실패 로그다 — hibernate-validator 6.0.12과 Spring 4.3.x의 버전 불일치가 원인이었다.</p>
+
         <p><strong>원인</strong> — 강사님 커스텀 dependency로 추가된 <code>hibernate-validator 6.0.12</code>가 Spring 4.3.x와 호환되지 않음(hibernate-validator 6.x는 Bean Validation 2.0을 요구하지만, Spring 4.3.x는 Bean Validation 1.1 기반이라 버전 불일치로 충돌 발생).</p>
       </div>
 
@@ -1309,6 +1418,16 @@ javax.validation.BootstrapConfiguration.getClockProviderClassName()</code></pre>
         <div class="box-head"><span class="ico">!</span>증상 & 원인</div>
         <p><strong>증상</strong>:</p>
         <pre><code>Caused by: java.sql.SQLSyntaxErrorException: Unknown database 'msa_user'</code></pre>
+
+        <div class="term-window">
+          <div class="term-titlebar">
+            <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+            <span class="term-label">edu-msa-user pod 로그</span>
+          </div>
+          <div class="term-body"><span class="out">Caused by: java.sql.SQLSyntaxErrorException: Unknown database 'msa_user'</span></div>
+        </div>
+        <p class="term-caption"><span class="tag-example">실제 실습 결과</span> 인스턴스를 재시작한 뒤 MySQL Pod가 재생성되면서 DB가 초기화되어 실제로 발생한 오류다 — PVC 미설정이 원인이었다.</p>
+
         <p><strong>원인</strong> — MySQL deployment에 <span class="term" title="쿠버네티스 파드가 재생성되어도 데이터가 사라지지 않도록 외부 저장 공간을 미리 요청해 연결해두는 리소스(PersistentVolumeClaim)">PVC(PersistentVolumeClaim)</span>가 없어서, <span class="term" title="실제로 띄워서 동작 중인 서버(가상머신) 한 대">인스턴스</span> 중지/재시작으로 파드가 재생성될 때 DB 데이터가 초기화됨.</p>
       </div>
 

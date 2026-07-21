@@ -669,11 +669,53 @@
       <ol class="steps">
         <li><h4>로컬 환경에서 키 생성</h4>아래 명령으로 공개/개인 키를 생성합니다. <em>이 코드가 하는 일을 한 줄로 요약하면: 내 컴퓨터에 SSH 접속용 "공개키 + 개인키" 한 쌍을 새로 만드는 명령입니다.</em>
 <pre><code>ssh-keygen -t rsa -f cloud.key</code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">bash</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> ssh-keygen -t rsa -f cloud.key
+<span class="out">Generating public/private rsa key pair.
+Enter passphrase (empty for no passphrase):
+Enter same passphrase again:
+Your identification has been saved in cloud.key
+Your public key has been saved in cloud.key.pub
+The key fingerprint is:
+SHA256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx user@host
+The key's randomart image is:
++---[RSA 3072]----+
+|      ...        |
+|     . o o       |
+|      o + .      |
+|     . = . E     |
+|      + S .      |
+|     . + o       |
+|      o + .      |
+|       + .       |
+|        .        |
++----[SHA256]-----+</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 실제 지문(fingerprint) 값과 randomart 이미지는 키를 생성할 때마다 달라지며, 이 화면은 ssh-keygen 명령의 일반적인 출력 형태를 보여주기 위한 예시다.</p>
         </li>
         <li><h4>Compute &gt; Key Pair &gt; "키페어 가져오기" 클릭</h4></li>
         <li><h4>공개 키 등록</h4>공개 키 파일을 선택하거나 직접 붙여넣고, 키페어 이름 입력 → 등록 (파일을 선택하면 키페어 이름과 공개 키가 자동 입력되며, 직접 입력도 가능)</li>
         <li><h4>인스턴스 생성 후 접속</h4>아래 명령으로 접속합니다(User 이름은 이미지에 따라 다를 수 있음). <em>이 코드가 하는 일을 한 줄로 요약하면: 방금 만든 개인키 파일로 인스턴스에 SSH 원격 접속하는 명령입니다.</em>
 <pre><code>ssh -i cloud.key ubuntu@&lt;instance_ip&gt;</code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">bash</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> ssh -i cloud.key ubuntu@&lt;instance_ip&gt;
+<span class="out">The authenticity of host '&lt;instance_ip&gt; (&lt;instance_ip&gt;)' can't be established.
+ED25519 key fingerprint is SHA256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '&lt;instance_ip&gt;' (ED25519) to the list of known hosts.
+Welcome to &lt;OS 배포판·버전 — 사용한 이미지에 따라 다름&gt;
+
+ubuntu@instance:~$</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 실제 접속 시 IP, 호스트 지문(fingerprint), 우분투 배포판 버전 등은 인스턴스 환경마다 다르며, 이 화면은 최초 SSH 접속 시 나타나는 일반적인 출력 형태를 보여주기 위한 예시다.</p>
         </li>
       </ol>
 

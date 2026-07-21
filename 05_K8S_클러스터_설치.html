@@ -414,9 +414,31 @@ Your identification has been saved in /home/ubuntu/.ssh/id_rsa
 Your public key has been saved in /home/ubuntu/.ssh/id_rsa.pub
 The key fingerprint is:
 <span class="cmd-comment">(생략…)</span></code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@edu-cluster1: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> ssh-keygen -t rsa -m PEM -N '' -f $HOME/.ssh/id_rsa
+<span class="out">Generating public/private rsa key pair.
+Your identification has been saved in /home/ubuntu/.ssh/id_rsa
+Your public key has been saved in /home/ubuntu/.ssh/id_rsa.pub
+The key fingerprint is:
+<span class="comment">(생략…)</span></span></div>
+</div>
+<p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> fingerprint 등 실제 값은 인스턴스마다 다르며, 이 화면은 ssh-keygen 명령이 정상 실행되면 id_rsa(개인키)·id_rsa.pub(공개키)가 /home/ubuntu/.ssh/ 아래 생성됐다는 메시지가 이런 형태로 출력된다는 것을 보여주는 예시다.</p>
         </li>
         <li><h4>RSA 공개키 출력 및 복사</h4>
 <pre><code>cat ~/.ssh/id_rsa.pub</code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@edu-cluster1: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> cat ~/.ssh/id_rsa.pub
+<span class="out">ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC5QrbqzV6g4iZT4iR1u+EK <span class="comment">…(생략)</span></span></div>
+</div>
+<p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 실제 공개키 문자열은 인스턴스마다 다르며, 이 화면은 cat 명령으로 공개키를 출력해 복사하는 절차를 보여주기 위한 예시다 — 이렇게 얻은 값을 Control Plane과 Worker 3대의 authorized_keys에 붙여넣는다.</p>
         </li>
         <li><h4>Control Plane의 authorized_keys 파일 마지막 줄 아래에 공개키 붙여넣기</h4>Install 인스턴스를 만든 경우 그곳에도 붙여넣어야 합니다.
 <pre><code>vi .ssh/authorized_keys</code></pre>
@@ -466,6 +488,20 @@ The key fingerprint is:
         <li><h4>클러스터 Deployment 다운로드</h4>
 <pre><code>git clone https://github.com/K-PaaS/cp-deployment.git -b branch_v1.7.x</code></pre>
           <p>Download URL: <code>https://github.com/k-paas/cp-deployment</code></p>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@edu-cluster1: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> git clone https://github.com/K-PaaS/cp-deployment.git -b branch_v1.7.x
+<span class="out">Cloning into 'cp-deployment'...
+remote: Enumerating objects: <span class="comment">(생략)</span>
+remote: Counting objects: 100% <span class="comment">(생략)</span>
+remote: Compressing objects: 100% <span class="comment">(생략)</span>
+Receiving objects: 100% <span class="comment">(생략)</span>, done.
+Resolving deltas: 100% <span class="comment">(생략)</span>, done.</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 실제 출력되는 객체 수·용량 등의 숫자는 그 시점의 저장소 상태에 따라 달라지며, 이 화면은 git clone 명령의 일반적인 출력 형태를 보여주기 위한 예시다.</p>
         </li>
       </ol>
 
@@ -612,6 +648,20 @@ NHN_API_BASE_URL=https://kr1-api-network-infrastructure.nhncloudservice.com</cod
         </li>
       </ol>
 
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@edu-cluster1: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> ./deploy-cp-cluster.sh
+<span class="out">PLAY RECAP *********************************************************
+edu-cluster1               : ok=xxx  changed=xx   unreachable=0    failed=0    skipped=xx   rescued=0    ignored=0
+edu-cluster2               : ok=xxx  changed=xx   unreachable=0    failed=0    skipped=xx   rescued=0    ignored=0
+edu-cluster3               : ok=xxx  changed=xx   unreachable=0    failed=0    skipped=xx   rescued=0    ignored=0
+edu-cluster4               : ok=xxx  changed=xx   unreachable=0    failed=0    skipped=xx   rescued=0    ignored=0</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> ok/changed/skipped의 실제 숫자(xxx)는 실행할 때마다 달라지며, 확인해야 할 핵심은 노드(Control Plane 1 + Worker 3)마다 <code>failed=0</code>인지 여부다.</p>
+
       <figure>
         <img src="assets/05_K8S_클러스터_설치/images/p040_x271.png" alt="deploy-cp-cluster.sh 실행 중 Ansible PLAY RECAP 로그">
         <figcaption><code>deploy-cp-cluster.sh</code> 실행 중 Ansible이 출력하는 PLAY RECAP 로그 예시 — 각 작업이 ok/changed/skipped/failed 건수로 집계되며, <code>failed=0</code>이면 지금까지의 작업이 문제없이 끝났다는 뜻이다.</figcaption>
@@ -647,9 +697,32 @@ NHN_API_BASE_URL=https://kr1-api-network-infrastructure.nhncloudservice.com</cod
       <ol class="steps">
         <li><h4>Kubernetes Node 확인</h4>
 <pre><code>kubectl get nodes</code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@edu-cluster1: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> kubectl get nodes
+<span class="out">NAME           STATUS   ROLES           AGE   VERSION
+edu-cluster1   Ready    control-plane   1d    v1.27.5
+edu-cluster2   Ready    &lt;none&gt;          1d    v1.27.5
+edu-cluster3   Ready    &lt;none&gt;          1d    v1.27.5
+edu-cluster4   Ready    &lt;none&gt;          1d    v1.27.5</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> AGE 등 실제 값은 설치 시점에 따라 달라지며, 4개 노드(Control Plane 1 + Worker 3) 모두 STATUS가 Ready로 나오면 정상이다.</p>
         </li>
         <li><h4>NFS Provisioner 포함, 전체 Pod 확인</h4>
 <pre><code>kubectl get pods</code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@edu-cluster1: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> kubectl get pods
+<span class="out">NAME                                       READY   STATUS    RESTARTS   AGE
+nfs-client-provisioner-xxxxxxxxxx-xxxxx   1/1     Running   0          1d</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> Pod 이름 뒤에 붙는 해시값은 배포마다 달라지며, STORAGE_TYPE=nfs로 설정했을 때 이 nfs-client-provisioner Pod가 Running으로 떠 있어야 정상이다.</p>
         </li>
         <li><h4>kube-system Namespace의 Pod 확인</h4>
 <pre><code>kubectl get pods -n kube-system</code></pre>
@@ -872,6 +945,17 @@ ssh-keygen -R 192.168.0.106</code></pre>
 <pre><code># Host 192.168.0.44 found: line 5
 /root/.ssh/known_hosts updated.
 Original contents retained as /root/.ssh/known_hosts.old</code></pre>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">root@jinyung0101-master: ~/.ssh</span>
+  </div>
+  <div class="term-body"><span class="prompt">#</span> ssh-keygen -R 192.168.0.44
+<span class="out"># Host 192.168.0.44 found: line 5
+/root/.ssh/known_hosts updated.
+Original contents retained as /root/.ssh/known_hosts.old</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">실제 실습 결과</span> 문제가 된 IP(192.168.0.44)의 known_hosts 항목이 지워지고, 기존 내용은 known_hosts.old로 백업됐다는 실제 출력이다.</p>
         </li>
         <li><h4>SSH 재접속 확인</h4>
 <pre><code>sudo ssh ubuntu@192.168.0.72 -i .ssh/id_rsa
@@ -927,6 +1011,17 @@ NAME                                      READY   STATUS    RESTARTS   AGE
 openbao-0                                 1/1     Running   5          6d18h
 openbao-agent-injector-6567764cc9-7zx8l   1/1     Running   3          4d20h</code></pre>
           <p><code>openbao-0</code>이 <code>READY 1/1</code>로 바뀌면 Unseal이 정상적으로 완료된 것입니다.</p>
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@jinyung0101-master: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> kubectl get pod -n openbao
+<span class="out">NAME                                      READY   STATUS    RESTARTS   AGE
+openbao-0                                 1/1     Running   5          6d18h
+openbao-agent-injector-6567764cc9-7zx8l   1/1     Running   3          4d20h</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">실제 실습 결과</span> Unseal 전에는 openbao-0이 READY 0/1이었다가, Unseal Key 2개를 순서대로 입력한 뒤 READY 1/1로 바뀐 실제 화면이다.</p>
         </li>
       </ol>
 
@@ -941,6 +1036,17 @@ openbao-agent-injector-6567764cc9-7zx8l   1/1     Running   3          4d20h</co
       <pre><code>kubectl get ing -n keycloak
 NAME       CLASS   HOSTS                         ADDRESS         PORTS     AGE
 keycloak   nginx   keycloak.xx.xx.xx.xx.nip.io   192.168.9.8     80, 443   6d18h</code></pre>
+
+<div class="term-window">
+  <div class="term-titlebar">
+    <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+    <span class="term-label">ubuntu@jinyung0101-master: ~</span>
+  </div>
+  <div class="term-body"><span class="prompt">$</span> kubectl get ing -n keycloak
+<span class="out">NAME       CLASS   HOSTS                         ADDRESS         PORTS     AGE
+keycloak   nginx   keycloak.xx.xx.xx.xx.nip.io   192.168.9.8     80, 443   6d18h</span></div>
+</div>
+<p class="term-caption"><span class="tag-example">실제 실습 결과</span> HOSTS 열의 주소(keycloak.xx.xx.xx.xx.nip.io)로 접속해 관리자 계정으로 로그인한다.</p>
 
       <ol class="steps">
         <li><h4>Ingress 주소로 접속 후 관리자 로그인</h4>위 HOSTS 주소(<code>keycloak.xx.xx.xx.xx.nip.io</code>)로 접속해 관리자 계정(ID: <code>admin</code> / PWD: <code>&lt;본인 비밀번호&gt;</code>)으로 로그인합니다.</li>

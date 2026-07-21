@@ -558,11 +558,30 @@ spec:
           <h4>create (생성)</h4>
           <p>파일이나 표준 입력에서 하나 이상의 리소스를 생성합니다.</p>
           <pre><code>$ kubectl create -f FILENAME [flags]</code></pre>
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">bash</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> kubectl create -f edu-msa-board.yaml
+<span class="out">deployment.apps/edu-msa-board created</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 실제 출력 값(리소스 이름 등)은 실행 환경마다 다르며, 이 화면은 kubectl create -f 명령의 일반적인 출력 형태를 보여주기 위한 예시다(파일명·리소스 이름은 이번 강의 Part Ⅵ에서 쓰인 edu-msa-board 예시를 재사용).</p>
         </li>
         <li>
           <h4>apply (생성/변경 적용)</h4>
           <p>파일이나 표준 입력(stdin)으로부터 리소스에 구성 변경사항을 적용합니다(yaml 파일의 리소스들을 생성하며, yaml 파일이 있는 위치에서 실행).</p>
           <pre><code>$ kubectl apply -f FILENAME [flags]</code></pre>
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">bash</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> kubectl apply -f edu-msa-board.yaml
+<span class="out">deployment.apps/edu-msa-board created
+service/edu-msa-board created</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 실제 출력 값은 실행 환경과 파일 내용마다 다르며, 이 화면은 kubectl apply -f 명령의 일반적인 출력 형태를 보여주기 위한 예시다(이미 있는 리소스에 다시 실행하면 created 대신 configured로 표시된다).</p>
         </li>
         <li>
           <h4>get (조회)</h4>
@@ -573,6 +592,16 @@ $ kubectl get [TYPE] [NAME] [flags]
 
 <span class="cmd-comment"># 사용 예시</span>
 $ kubectl get pods</code></pre>
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">bash</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> kubectl get pods
+<span class="out">NAME                      READY   STATUS    RESTARTS   AGE
+nginx-559d75d76b-4zhsz    1/1     Running   0          10d</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 실제 출력 값(파드 이름, AGE 등)은 실행 환경마다 다르며, 이 화면은 kubectl get pods 명령의 일반적인 출력 형태를 보여주기 위한 예시다(파드 이름은 아래 describe 예시와 동일한 nginx 파드를 재사용).</p>
         </li>
         <li>
           <h4>describe (상세조회)</h4>
@@ -585,6 +614,30 @@ $ kubectl describe pod nginx-559d75d76b-4zhsz</code></pre>
             <img src="assets/08_K8S_이론/images/p036_x223.png" alt="kubectl describe pod 명령 실행 결과 터미널 화면">
             <figcaption>kubectl describe pod 실행 예시 — 리소스 상세 상태가 모두 출력된다</figcaption>
           </figure>
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">I:\kubeyaml&gt;</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> kubectl describe pod nginx-559d75d76b-4zhsz
+<span class="out">Name:         nginx-559d75d76b-4zhsz
+Namespace:    paas-83cc724a-4425-4f1e-aab4-63a4f23fcd99-caas
+Priority:     0
+Node:         playpark-caas-worker-6/10.0.50.254
+Start Time:   Fri, 29 Oct 2021 14:47:49 +0900
+Labels:       app=nginx
+              pod-template-hash=559d75d76b
+Annotations:  cni.projectcalico.org/podIP: 10.233.117.192/32
+              cni.projectcalico.org/podIPs: 10.233.117.192/32
+              kubernetes.io/limit-ranger: LimitRanger plugin set: cpu, memory request for container nginx; cpu, memory limit for container nginx
+Status:       Running
+IP:           10.233.117.192
+IPs:
+  IP:         10.233.117.192
+Controlled By:  ReplicaSet/nginx-559d75d76b
+Containers:</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">실제 실습 결과</span> 위 화면 캡처의 내용을 텍스트로 옮긴 것이다(원본 화면은 Containers: 항목 이후가 잘려 있다).</p>
         </li>
         <li>
           <h4>logs (로그조회)</h4>
@@ -597,6 +650,19 @@ $ kubectl logs -f edu-msa-zuul-647b787d7-g5st7</code></pre>
             <img src="assets/08_K8S_이론/images/p037_x226.png" alt="kubectl logs -f 명령 실행 결과, Spring Boot 애플리케이션 로그 출력">
             <figcaption>kubectl logs -f 실행 예시 — 컨테이너 로그를 실시간으로 스트리밍한다</figcaption>
           </figure>
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">I:\kubeyaml&gt;</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> kubectl logs -f edu-msa-zuul-647b787d7-g5st7
+<span class="comment">(Spring Boot 시작 배너 생략)</span>
+<span class="out">:: Spring Boot ::        (v2.3.8.BUILD-SNAPSHOT)
+
+2021-10-29 09:15:55.805  INFO 1 --- [           main] paasta.msa.zuul.ZuulApplication          : No active profile set, falling back to default profiles: default
+2021-10-29 09:17:06.104  WARN 1 --- [           main] o.s.boot.actuate.endpoint.EndpointId     : Endpoint ID 'hystrix.stream' contains invalid characters, please migrate to a valid format.</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">실제 실습 결과</span> 위 화면 캡처의 로그 텍스트를 옮긴 것이며, 장식용 Spring Boot 시작 배너(ASCII 아트)는 생략했다.</p>
         </li>
         <li>
           <h4>edit (Editor 수정)</h4>
@@ -605,6 +671,16 @@ $ kubectl logs -f edu-msa-zuul-647b787d7-g5st7</code></pre>
 
 <span class="cmd-comment"># 사용 예시</span>
 $ kubectl edit deployment nginx</code></pre>
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">bash</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> kubectl edit deployment nginx
+<span class="comment"># 편집기(vi/nano 등)가 열리고, 내용을 수정한 뒤 저장하면 아래 메시지가 출력된다</span>
+<span class="out">deployment.apps/nginx edited</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 실제 출력 값은 실행 환경마다 다르며, 이 화면은 kubectl edit 명령의 일반적인 출력 형태를 보여주기 위한 예시다.</p>
         </li>
       </ol>
 

@@ -194,6 +194,40 @@ $ ls ~/workspace/container-platform
 
 <span class="cmd-comment"># Deployment 파일 압축 해제</span>
 $ tar -xvf cp-portal-deployment-v1.7.0.tar.gz</code></pre>
+
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">bash</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> wget --content-disposition https://nextcloud.k-paas.org/index.php/s/qrApL4sP5eC2WMX/download
+<span class="out">Resolving nextcloud.k-paas.org (nextcloud.k-paas.org)... xx.xx.xx.xx
+Connecting to nextcloud.k-paas.org (nextcloud.k-paas.org)|xx.xx.xx.xx|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Saving to: 'cp-portal-deployment-v1.7.0.tar.gz'
+
+cp-portal-deployment-v1.7.0.tar.gz     100%[===================>]
+
+'cp-portal-deployment-v1.7.0.tar.gz' saved</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 실제 IP·전송 속도·시간 값은 실행 환경마다 다르며, 이 화면은 wget 다운로드 명령의 일반적인 출력 형태를 보여주기 위한 예시다.</p>
+
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">bash</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> tar -xvf cp-portal-deployment-v1.7.0.tar.gz
+<span class="out">cp-portal-deployment/
+cp-portal-deployment/script/
+cp-portal-deployment/script_mc/
+cp-portal-deployment/script_fed/
+cp-portal-deployment/values_orig/
+cp-portal-deployment/secmg_orig/
+cp-portal-deployment/istio_mc/
+...</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 압축 해제 시 나열되는 개별 파일 목록은 실행 환경마다 다르며, 이 화면은 위 "배포 파일 디렉토리 구성"에 나온 최상위 폴더명만 참고로 보여준다.</p>
         </li>
         <li>
           <h4>배포 파일 디렉토리 구성 확인</h4>
@@ -257,6 +291,57 @@ $ kubectl get pods -n cp-portal
 $ kubectl get pods -n chartmuseum
 $ kubectl get pods -n chaos-mesh
 $ kubectl get ingress -A</code></pre>
+
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">ubuntu@k8s-master1: ~</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> kubectl get pods -n harbor
+<span class="out">NAME                                    READY   STATUS    RESTARTS   AGE
+harbor-core-59cd4474d6-84g49            1/1     Running   0          7m9s
+harbor-database-0                       1/1     Running   0          7m9s
+harbor-jobservice-6f7bf77847-f8tgd      1/1     Running   0          7m9s
+harbor-portal-854ff6c585-gxbjl          1/1     Running   0          7m9s
+harbor-redis-0                          1/1     Running   0          7m9s
+harbor-registry-7cd8d9c569-rqlvv        2/2     Running   0          7m9s
+harbor-trivy-0                          1/1     Running   0          7m9s</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">실제 실습 결과</span> Harbor 관련 7개 Pod가 모두 Running 상태로 배포된 것을 확인할 수 있다 (원본 p.13).</p>
+
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">ubuntu@k8s-master1: ~</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> kubectl get pods -n keycloak
+<span class="out">NAME         READY   STATUS    RESTARTS   AGE
+keycloak-0   1/1     Running   0          6m55s
+keycloak-1   1/1     Running   91         6m55s</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">실제 실습 결과</span> keycloak-1의 RESTARTS가 91회로 보이지만, STATUS가 Running이면 초기 부트스트랩 과정에서 발생한 재시작으로 보고 정상 배포로 간주한다 (원본 p.14).</p>
+
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">ubuntu@k8s-master1: ~</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> kubectl get pods -n cp-portal
+<span class="out">NAME                                                     READY   STATUS    RESTARTS   AGE
+cp-portal-api-deployment-9dfbfc655-fnh2w                1/1     Running   0          7m25s
+cp-portal-catalog-api-deployment-56c5b74b9d-lzcb2       1/1     Running   0          7m25s
+cp-portal-chaos-api-deployment-76944f64ff-4rpdd         1/1     Running   0          7m25s
+cp-portal-chaos-collector-deployment-6f9b69584d-q4v48   1/1     Running   0          7m25s
+cp-portal-common-api-deployment-7cb898686d-286qh        1/1     Running   0          7m26s
+cp-portal-metric-api-deployment-6484648b75-bszfk        1/1     Running   0          7m26s
+cp-portal-migration-api-deployment-5cc978cc6b-sdmvk     1/1     Running   0          7m25s
+cp-portal-migration-auth-deployment-6c89fcd447-qjvc7    1/1     Running   0          7m26s
+cp-portal-migration-ui-deployment-6484685947-fnvr7      1/1     Running   0          7m25s
+cp-portal-remote-api-deployment-8656b556d-xw4vl         1/1     Running   0          7m25s
+cp-portal-terraman-deployment-559d664d96-wvdn8          1/1     Running   0          7m26s
+cp-portal-ui-deployment-7fc699cc87-ct744                1/1     Running   0          7m25s</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">실제 실습 결과</span> cp-portal 네임스페이스에 12개 Pod(포털 API·UI·마이그레이션 등)가 모두 1/1 Running으로 배포된 것을 확인할 수 있다 (원본 p.15).</p>
 
       <div class="table-wrap">
         <table>
@@ -450,6 +535,25 @@ release "cp-pipeline-config-server" uninstalled
 release "cp-pipeline-postgresql" uninstalled
 release "cp-pipeline-sonarqube" uninstalled
 namespace "cp-pipeline" deleted</code></pre>
+
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">ubuntu@k8s-master1: ~</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> ./uninstall-cp-pipeline.sh
+Are you sure you want to delete the container platform pipeline? &lt;y/n&gt; y
+<span class="out">release "cp-pipeline-api" uninstalled
+release "cp-pipeline-common-api" uninstalled
+release "cp-pipeline-ui" uninstalled
+release "cp-pipeline-inspection-api" uninstalled
+release "cp-pipeline-jenkins" uninstalled
+release "cp-pipeline-config-server" uninstalled
+release "cp-pipeline-postgresql" uninstalled
+release "cp-pipeline-sonarqube" uninstalled
+namespace "cp-pipeline" deleted</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">실제 실습 결과</span> y 입력 후 8개 Helm release와 네임스페이스 자체가 순서대로 삭제되는 것을 확인할 수 있다 (원본 p.32).</p>
     </section>
 
     <!-- ============================================================ -->
@@ -585,6 +689,21 @@ release "cp-source-control-manager" uninstalled
 release "cp-source-control-broker" uninstalled
 release "cp-source-control-ui" uninstalled
 namespace "cp-source-control" deleted</code></pre>
+
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">ubuntu@k8s-master1: ~</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> ./uninstall-cp-source-control.sh
+Are you sure you want to delete the container platform source control? &lt;y/n&gt; y
+<span class="out">release "cp-source-control-api" uninstalled
+release "cp-source-control-manager" uninstalled
+release "cp-source-control-broker" uninstalled
+release "cp-source-control-ui" uninstalled
+namespace "cp-source-control" deleted</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">실제 실습 결과</span> y 입력 후 4개 Helm release와 네임스페이스가 삭제되는 것을 확인할 수 있다 (원본 p.45).</p>
     </section>
 
     <!-- ============================================================ -->

@@ -292,7 +292,7 @@ $ sudo chmod a+r /etc/apt/keyrings/docker.asc</code></pre>
 
       <p>이 코드가 하는 일을 한 줄로 요약하면: 앞서 받은 키를 이용해, 우분투가 "도커 공식 배포처"를 신뢰하도록 저장소 주소를 등록하는 단계입니다.</p>
       <pre><code><span class="cmd-comment"># Add the repository to Apt sources:</span>
-$ sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+$ sudo tee /etc/apt/sources.list.d/docker.sources &lt;&lt;EOF
 Types: deb
 URIs: https://download.docker.com/linux/ubuntu
 Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
@@ -350,17 +350,68 @@ $ sudo apt update</code></pre>
           <h4>실습) run 명령어</h4>
           도커 환경이 정상 동작하는지 <code>hello-world</code> 이미지로 확인합니다.
           <pre><code>$ docker run hello-world</code></pre>
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">ubuntu@practice-server: ~</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> docker run hello-world
+<span class="out">Hello from Docker!
+This message shows that your installation appears to be working correctly.
+
+To generate this message, Docker took the following steps:
+ 1. The Docker client contacted the Docker daemon.
+ 2. The Docker daemon pulled the "hello-world" image from the Docker Hub.
+    (amd64)
+ 3. The Docker daemon created a new container from that image which runs the
+    executable that produces the output you are currently reading.
+ 4. The Docker daemon streamed that output to the Docker client, which sent it
+    to your terminal.
+…</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">실제 실습 결과</span> 설치가 정상이면 이 4단계 설명과 함께 "Hello from Docker!" 메시지가 그대로 출력된다.</p>
           출력 요약: <code>Hello from Docker! This message shows that your installation appears to be working correctly.</code> → Docker client가 <span class="term" title="화면에 보이지 않고 항상 백그라운드에서 대기하며 요청을 처리하는 프로그램">daemon</span>에 접속 → daemon이 Docker Hub에서 hello-world 이미지를 pull → 새 컨테이너 생성·실행 → 출력을 클라이언트 터미널로 스트리밍.
         </li>
         <li>
           <h4>실습) -d 옵션</h4>
           detached 모드로 실행하면 실행 직후에도 터미널을 계속 사용할 수 있습니다.
           <pre><code>$ docker run -d python:3.8-alpine python -m http.server</code></pre>
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">ubuntu@practice-server: ~</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> docker run -d python:3.8-alpine python -m http.server
+<span class="out">Unable to find image 'python:3.8-alpine' locally
+3.8-alpine: Pulling from library/python
+86e037ebf8b6: Pull complete
+2fe9ed713579: Pull complete
+43c4264eed91: Pull complete
+bbd039b2f2dc: Pull complete
+259a9516aa4e: Download complete
+8ded280900b7: Download complete
+Digest: sha256:3d93b1f77efce339aa77db726656872517b0d67837989aa7c4b35bd5ae7e81ba
+Status: Downloaded newer image for python:3.8-alpine
+ca1161146d90bb4ca08aa6da4d97b277ff916a2d40d6f35eefcbcfb5654350e0</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">실제 실습 결과</span> 로컬에 이미지가 없어 Docker Hub에서 새로 pull 받은 뒤, 컨테이너 ID(해시)만 출력하고 터미널은 바로 돌아온다 — 백그라운드 실행이 확인된다.</p>
         </li>
         <li>
           <h4>실습) -it 옵션</h4>
           컨테이너를 종료하지 않은 채로 터미널을 계속 사용합니다(파이썬 인터랙티브 쉘 진입).
           <pre><code>$ docker run -it python:3.8-alpine</code></pre>
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">ubuntu@practice-server: ~</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> docker run -it python:3.8-alpine
+<span class="out">Python 3.8.20 (default, Sep 12 2024, 21:14:32)
+[GCC 13.2.1 20240309] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+&gt;&gt;&gt;</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">실제 실습 결과</span> 컨테이너 안의 파이썬 인터랙티브 쉘(&gt;&gt;&gt;)로 바로 들어가 명령을 입력할 수 있는 상태가 된다.</p>
         </li>
         <li>
           <h4>실습) --name 옵션</h4>
@@ -368,18 +419,57 @@ $ sudo apt update</code></pre>
           <pre><code>$ docker run -d --name my-server python:3.8-alpine python -m http.server
 $ docker ps
 <span class="cmd-comment"># NAMES 컬럼에 my-server 확인</span></code></pre>
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">ubuntu@practice-server: ~</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> docker run -d --name my-server python:3.8-alpine python -m http.server
+<span class="out">60d80f4c3fe75bfe8ecae39399fdee69a1e5acd193e63530fb4ad9ef6cac2bf7</span>
+<span class="prompt">$</span> docker ps
+<span class="out">CONTAINER ID   IMAGE               COMMAND                  CREATED         STATUS         PORTS     NAMES
+60d80f4c3fe7   python:3.8-alpine   "python -m http.serv…"   4 seconds ago   Up 3 seconds             my-server</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">실제 실습 결과</span> docker ps의 NAMES 컬럼에 지정한 이름(my-server)이 그대로 표시된 것을 확인할 수 있다.</p>
         </li>
         <li>
           <h4>실습) -e 옵션</h4>
           컨테이너 환경변수를 설정합니다.
           <pre><code>$ docker run -e FOO=bar python:3.8-alpine env
 <span class="cmd-comment"># 출력에 FOO=bar 포함됨</span></code></pre>
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">ubuntu@practice-server: ~</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> docker run -e FOO=bar python:3.8-alpine env
+<span class="out">PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+HOSTNAME=f265fc6c1d49
+FOO=bar
+LANG=C.UTF-8
+GPG_KEY=E3FF2839C048B25C084DEBE9B26995E310250568
+PYTHON_VERSION=3.8.20
+HOME=/root</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">실제 실습 결과</span> env 출력 중간에 -e로 지정한 FOO=bar가 그대로 컨테이너 환경변수로 들어가 있는 것을 확인할 수 있다.</p>
         </li>
         <li>
           <h4>실습) -p 옵션</h4>
           호스트 포트와 컨테이너 포트를 연결합니다(포트포워딩).
           <pre><code>$ docker run -d -p 80:8000 python:3.8-alpine python -m http.server
 <span class="cmd-comment"># docker ps PORTS 컬럼에 0.0.0.0:80->8000/tcp 확인</span></code></pre>
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">ubuntu@practice-server: ~</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> docker run -d -p 80:8000 python:3.8-alpine python -m http.server
+<span class="out">f1762a91b6f1068554b16d1298f746e603ab3b6da1e2fd51b05564348a136379</span>
+<span class="prompt">$</span> docker ps
+<span class="out">CONTAINER ID   IMAGE               COMMAND                  CREATED         STATUS         PORTS                                     NAMES
+f1762a91b6f1   python:3.8-alpine   "python -m http.serv…"   4 seconds ago   Up 3 seconds   0.0.0.0:80-&gt;8000/tcp, [::]:80-&gt;8000/tcp   modest_pare</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">실제 실습 결과</span> PORTS 컬럼에 "호스트포트-&gt;컨테이너포트" 형태로 매핑된 것을 확인할 수 있다. --name을 주지 않아 NAMES엔 도커가 임의로 붙인 이름(modest_pare)이 나온다.</p>
         </li>
         <li>
           <h4>실습) --rm 옵션</h4>
@@ -476,6 +566,22 @@ volumes:
         <p style="margin-bottom:0;"><strong>실행</strong></p>
         <pre style="margin-bottom:0;"><code>$ docker compose up
 $ docker compose ps</code></pre>
+        <div class="term-window">
+          <div class="term-titlebar">
+            <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+            <span class="term-label">ubuntu@practice-server: ~</span>
+          </div>
+          <div class="term-body"><span class="prompt">$</span> docker compose up
+<span class="out">[+] up 3/3
+  Network mysql_nginx_service_default   Created   0.0s
+  Container mysql_nginx_service-mysql-1 Created   0.1s
+  Container mysql_nginx_service-nginx-1 Created   …</span>
+<span class="prompt">$</span> docker compose ps
+<span class="out">NAME                          IMAGE       COMMAND                  SERVICE   CREATED          STATUS          PORTS
+mysql_nginx_service-mysql-1   mysql:8.0   "docker-entrypoint.s…"   mysql     12 minutes ago   Up 12 minutes   3306/tcp, 33060/tcp
+mysql_nginx_service-nginx-1   nginx       "/docker-entrypoint.…"   nginx     12 minutes ago   Up 12 minutes   0.0.0.0:80-&gt;80/tcp, [::]:80-&gt;80/tcp</span></div>
+        </div>
+        <p class="term-caption"><span class="tag-example">실제 실습 결과</span> docker run을 두 번 반복하는 대신 compose up 한 번으로 mysql·nginx 컨테이너와 전용 네트워크까지 함께 생성되고, ps에서 두 컨테이너가 모두 Up 상태로 확인된다.</p>
       </div>
 
       <div class="summary">
@@ -518,6 +624,22 @@ CMD [ "node", "app.js" ]       <span class="cmd-comment"># 컨테이너 생성 �
 $ docker images
 <span class="cmd-comment"># IMAGE              ID             DISK USAGE   CONTENT SIZE
 # docker-test:1.0     99c4e23fac60   171MB        42.4MB</span></code></pre>
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">ubuntu@practice-server: ~/my-project</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> docker build --no-cache -t docker-test:1.0 .
+<span class="out">[+] Building 1.9s (10/10) FINISHED                              docker:default
+ =&gt; [internal] load build definition from Dockerfile                     0.0s
+ =&gt; =&gt; transferring dockerfile: 161B                                     0.0s
+ =&gt; [internal] load metadata for docker.io/library/node:16-alpine        0.9s
+ =&gt; [internal] load .dockerignore                                       0.0s
+ =&gt; =&gt; transferring context: 2B                                          0.0s
+ =&gt; [1/5] FROM docker.io/library/node:16-alpine@sha256:a1f9d027912b58a7c75be7716c97cfbc6d3099f3a97ed84aa490be9dee20e787   0.0s
+…</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">실제 실습 결과</span> Dockerfile의 각 단계(FROM/WORKDIR/COPY/RUN 등)가 BuildKit에서 "[n/5]" 형태의 개별 스텝으로 표시되며, 전체 몇 단계 중 몇 단계가 끝났는지(예: 10/10 FINISHED)를 실시간으로 보여준다.</p>
 
       <h3 id="u4-2">실습2 · docker-compose로 다중 이미지 빌드</h3>
       <p>Dockerfile 하나 대신, <code>docker-compose.yaml</code>로 여러 서비스를 한 번에 정의해 빌드할 수 있습니다.</p>
@@ -559,6 +681,20 @@ $ docker images
 <span class="cmd-comment"># IMAGE            ID             DISK USAGE   CONTENT SIZE
 # alpine:1.0        4396b8e63277   171MB        42.4MB
 # ubuntu:22.04     7c106361e6f1   117MB        29.7MB</span></code></pre>
+      <div class="term-window">
+        <div class="term-titlebar">
+          <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+          <span class="term-label">ubuntu@practice-server: ~/my-project</span>
+        </div>
+        <div class="term-body"><span class="prompt">$</span> docker compose build
+<span class="out">WARN[0000] /home/ubuntu/dockerfile5/docker-compose.yaml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+[+] Building 1.2s (19/19) FINISHED
+ =&gt; [internal] load local bake definitions                               0.0s
+ =&gt; =&gt; reading from stdin 943B                                           0.0s
+ =&gt; [ubuntu internal] load build definition from Dockerfile              0.0s
+…</span></div>
+      </div>
+      <p class="term-caption"><span class="tag-example">실제 실습 결과</span> docker-compose.yaml 최상단의 <code>version</code> 키가 최신 Compose에서는 더 이상 필요 없다는 경고(WARN)가 먼저 뜨고, 이어서 alpine·ubuntu 두 이미지가 총 19단계로 함께 빌드된다. (경로의 dockerfile5는 촬영 당시 실습 서버의 폴더명으로 이 교재의 dockerfile2 폴더명과는 다르지만, 캡처된 원본 그대로다.)</p>
 
       <div class="box box-how">
         <div class="box-head"><span class="ico">⚙</span>핵심 정리</div>
@@ -623,6 +759,21 @@ $ docker images
           <h4>배포 파일 다운로드</h4>
           <pre><code>$ cd ~
 $ git clone https://github.com/K-PaaS/edu-msa-file.git</code></pre>
+          <div class="term-window">
+            <div class="term-titlebar">
+              <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
+              <span class="term-label">bash</span>
+            </div>
+            <div class="term-body"><span class="prompt">$</span> cd ~
+<span class="prompt">$</span> git clone https://github.com/K-PaaS/edu-msa-file.git
+<span class="out">Cloning into 'edu-msa-file'...
+remote: Enumerating objects, done.
+remote: Counting objects, done.
+remote: Compressing objects, done.
+Receiving objects, done.
+Resolving deltas, done.</span></div>
+          </div>
+          <p class="term-caption"><span class="tag-example">예시 화면 · 참고용</span> 실제 출력 값(진행률, 오브젝트 수 등)은 저장소 크기와 네트워크 상태에 따라 다르며, 이 화면은 git clone 명령의 일반적인 출력 형태를 보여주기 위한 예시다.</p>
           MSA 애플리케이션 배포를 위한 배포 설정 파일(Dockerfile 등)을 내려받습니다.
         </li>
         <li>
