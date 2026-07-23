@@ -661,7 +661,18 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
 .theme-toggle .icon { font-size: 1rem; line-height: 1; }
 @media (max-width: 880px) {
-  .theme-toggle { right: 12px; bottom: 12px; padding: 8px 14px; font-size: 0.8rem; }
+  /* fixed+bottom-right overlapped body text on narrow screens — dock it
+     in normal flow next to the TOC toggle instead of floating over content */
+  .theme-toggle {
+    position: static;
+    display: block;
+    width: calc(100% - 64px);
+    margin: 10px 32px 0;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    box-shadow: none;
+    text-align: left;
+  }
 }
 @media print {
   .theme-toggle { display: none !important; }

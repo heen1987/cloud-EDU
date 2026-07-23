@@ -33,7 +33,18 @@
       try { localStorage.setItem(KEY, next); } catch (e) {}
       renderLabel(btn, next);
     });
-    document.body.appendChild(btn);
+    // desktop: fixed corner (DOM position doesn't matter there).
+    // mobile: CSS docks it into normal flow, so place it right after the
+    // TOC toggle (or at the top of <main>) so it never overlaps body text.
+    var tocToggle = document.querySelector(".toc-toggle");
+    var main = document.querySelector("main");
+    if (tocToggle) {
+      tocToggle.insertAdjacentElement("afterend", btn);
+    } else if (main) {
+      main.insertAdjacentElement("afterbegin", btn);
+    } else {
+      document.body.appendChild(btn);
+    }
   }
 
   if (document.readyState === "loading") {
