@@ -660,7 +660,7 @@ services:                             <span class="cmd-comment"># 서비스 정�
       context: ubuntu
       dockerfile: Dockerfile</code></pre>
 
-      <p><strong>alpine/Dockerfile</strong> — <a href="#u4-1">실습1의 Dockerfile</a>과 동일한 내용(FROM node:16-alpine → WORKDIR → COPY → RUN npm install → COPY → EXPOSE 80 → CMD)입니다.</p>
+      <p><strong>alpine/Dockerfile</strong> — <span class="term" title="앞의 실습1(dockerfile1)에서 쓴 것과 동일한 Node.js Dockerfile">실습1의 Dockerfile</span>과 동일한 내용(FROM node:16-alpine → WORKDIR → COPY → RUN npm install → COPY → EXPOSE 80 → CMD)입니다.</p>
 
       <p><strong>ubuntu/Dockerfile</strong></p>
       <pre><code>FROM ubuntu:22.04              <span class="cmd-comment"># 생성할 이미지의 베이스 이미지를 지정</span>
@@ -876,7 +876,7 @@ $ docker push ${DOCKER_HUB_ID}/edu-msa-zuul</code></pre>
       </div>
       <div class="box box-where">
         <div class="box-head"><span class="ico">◎</span>어디로 이어지는가</div>
-        <p>Ⅳ장 <a href="#u4-1">실습1</a>에서 원리로 설명한 것과 동일한 원본 파일이며, 이 폴더 자체가 그날 수업에서 <code>docker build --no-cache -t docker-test:1.0 .</code> 명령으로 실제 빌드에 쓰인 폴더입니다.</p>
+        <p>Ⅳ장 <span class="term" title="Ⅳ장 · 단일 Dockerfile 빌드 실습">실습1</span>에서 원리로 설명한 것과 동일한 원본 파일이며, 이 폴더 자체가 그날 수업에서 <code>docker build --no-cache -t docker-test:1.0 .</code> 명령으로 실제 빌드에 쓰인 폴더입니다.</p>
       </div>
 
       <p><strong>파일 구조</strong></p>
@@ -909,7 +909,7 @@ CMD [ &quot;node&quot;, &quot;app.js&quot; ]</code></pre>
       </div>
       <div class="box box-where">
         <div class="box-head"><span class="ico">◎</span>어디로 이어지는가</div>
-        <p>Ⅳ장 <a href="#u4-2">실습2</a>에서 원리로 설명한 것과 동일한 원본 파일입니다. <code>alpine/</code> 폴더는 실습1(dockerfile1)의 Node.js Dockerfile을 그대로 재사용하고, <code>ubuntu/</code> 폴더에는 별도의 짧은 Dockerfile을 둡니다.</p>
+        <p>Ⅳ장 <span class="term" title="Ⅳ장 · Compose로 여러 이미지 동시 빌드 실습">실습2</span>에서 원리로 설명한 것과 동일한 원본 파일입니다. <code>alpine/</code> 폴더는 실습1(dockerfile1)의 Node.js Dockerfile을 그대로 재사용하고, <code>ubuntu/</code> 폴더에는 별도의 짧은 Dockerfile을 둡니다.</p>
       </div>
 
       <p><strong>파일 구조</strong></p>
@@ -965,7 +965,7 @@ RUN echo &quot;TEST ubuntu&quot;</code></pre>
       </div>
       <div class="box box-where">
         <div class="box-head"><span class="ico">◎</span>어디로 이어지는가</div>
-        <p>Ⅲ장 <a href="#u3-3">03절의 "After" 예시</a>와 내용이 동일한 실제 소스 파일입니다 — 교안용으로 재구성한 코드가 아니라, 그날 수업에서 작성해 남겨둔 <code>docker-compose.yml</code> 원본 그대로입니다.</p>
+        <p>Ⅲ장 <span class="term" title="Ⅲ장 03절 · docker run 반복 대신 docker-compose.yml 한 번으로 합치는 예시">03절의 "After" 예시</span>와 내용이 동일한 실제 소스 파일입니다 — 교안용으로 재구성한 코드가 아니라, 그날 수업에서 작성해 남겨둔 <code>docker-compose.yml</code> 원본 그대로입니다.</p>
       </div>
 
       <p><strong>docker-compose.yml</strong></p>
@@ -1003,7 +1003,7 @@ volumes:
       </div>
       <div class="box box-where">
         <div class="box-head"><span class="ico">◎</span>어디로 이어지는가</div>
-        <p>Ⅴ장 <a href="#u5-2">02절 실습 절차</a>에서 "Dockerfile 준비 → 빌드 → 태그 → 푸시"로 설명한 <code>edu-msa-zuul</code> 이미지의 실제 원본 폴더입니다. 이 API Gateway 이미지는 이후 7강 PaaS 실습에서 배포하는 게시판 애플리케이션의 진입점 이미지로 이어집니다.</p>
+        <p>Ⅴ장 <span class="term" title="Ⅴ장 02절 · Dockerfile 준비부터 Docker Hub 푸시까지의 실습 절차">02절 실습 절차</span>에서 "Dockerfile 준비 → 빌드 → 태그 → 푸시"로 설명한 <code>edu-msa-zuul</code> 이미지의 실제 원본 폴더입니다. 이 API Gateway 이미지는 이후 7강 PaaS 실습에서 배포하는 게시판 애플리케이션의 진입점 이미지로 이어집니다.</p>
       </div>
 
       <div class="box box-plain">

@@ -131,7 +131,7 @@
       </ol>
       <div class="summary">
         <div class="box-head">핵심 정리</div>
-        <p>불만족의 핵심 원인이 <strong>"벤더 종속"</strong>이라는 점 — 이것이 뒤에서 배우는 <a href="#u3-3">MSA</a>, <a href="#u3-4">Container</a>가 "이식 가능한 애플리케이션"을 만드는 방향으로 발전해온 이유와 직접 연결됩니다.</p>
+        <p>불만족의 핵심 원인이 <strong>"벤더 종속"</strong>이라는 점 — 이것이 뒤에서 배우는 <span class="term" title="독립 배포 가능한 작은 서비스로 쪼개는 아키텍처 — 이 페이지 뒤쪽 Part Ⅲ에서 자세히 다룸">MSA</span>, <span class="term" title="가벼운 실행 단위로 애플리케이션을 포장하는 기술 — 이 페이지 뒤쪽 Part Ⅲ에서 자세히 다룸">Container</span>가 "이식 가능한 애플리케이션"을 만드는 방향으로 발전해온 이유와 직접 연결됩니다.</p>
       </div>
 
       <h3 id="u1-4">04 · 2026년 ICT 기술 동향과 클라우드의 영향력</h3>
@@ -205,7 +205,7 @@
         <div class="stat-bar-row"><div class="stat-bar-label">Prometheus</div><div class="stat-bar-track"><div class="stat-bar-fill" style="width:77%"></div></div><div class="stat-bar-value">77%</div></div>
         <div class="stat-bar-row"><div class="stat-bar-label">CoreDNS</div><div class="stat-bar-track"><div class="stat-bar-fill" style="width:76%"></div></div><div class="stat-bar-value">76%</div></div>
         <div class="stat-bar-row"><div class="stat-bar-label">containerd</div><div class="stat-bar-track"><div class="stat-bar-fill" style="width:74%"></div></div><div class="stat-bar-value">74%</div></div>
-        <p class="stat-source">출처: CNCF Annual Cloud Native Survey — 이 순위의 도구들은 <a href="02_Container_기술.html">2강</a>·<a href="08_K8S_이론.html">8강</a>·<a href="09_K8S_실습.html">9강</a>에서 그대로 배웁니다.</p>
+        <p class="stat-source">출처: CNCF Annual Cloud Native Survey — 이 순위의 도구들은 <span class="term" title="2강 · Container 기술 — Docker/이미지/Compose를 다루는 강의">2강</span>·<span class="term" title="8강 · K8S 이론 — 쿠버네티스 리소스 원리를 다루는 강의">8강</span>·<span class="term" title="9강 · K8S 실습 — kubectl로 리소스를 직접 다루는 강의">9강</span>에서 그대로 배웁니다.</p>
       </div>
 
       <div class="box box-where">
@@ -495,7 +495,7 @@ PUT /user/admin
         <div class="box-head">MSA 장단점 요약</div>
         <p><strong>장점</strong> — 유연한 확장, 출시시간 단축, 빠르고 유연한 조직문화 기여, 신기술 수용력, 개발자 생산성, 복구능력.<br>
         <strong>단점</strong> — 개발/운영 복잡성, 통합테스트 어려움, 디버깅 어려움, <span class="term" title="더 이상 쪼갤 수 없는 하나의 작업 단위 — 여러 단계가 모두 성공하거나 모두 실패해야 하는 처리">트랜잭션</span> 처리 어려움, 배포 자동화 필요, 중복성(서비스마다 공통 기능을 각자 구현해야 하는 경우가 생김).
-        이 "복잡성"이라는 단점을 다루기 위해 다음 단원의 <a href="#u3-4">컨테이너 오케스트레이션</a>과 <a href="#u3-6">CI/CD 자동화</a>가 필요해집니다.</p>
+        이 "복잡성"이라는 단점을 다루기 위해 다음 단원의 <span class="term" title="컨테이너의 배포·확장·수명주기를 자동화하는 것 — 다음 단원에서 자세히 다룸">컨테이너 오케스트레이션</span>과 <span class="term" title="빌드/테스트/배포를 자동화하는 것 — 이어지는 단원에서 자세히 다룸">CI/CD 자동화</span>가 필요해집니다.</p>
       </div>
 
       <h3 id="u3-4">04 · Container & Orchestration</h3>
